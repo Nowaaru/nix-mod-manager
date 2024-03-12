@@ -1,11 +1,13 @@
 { pkgs }: let
   inherit (import ./lib) fetchers;
+  inherit (pkgs) lib;
+  inherit (lib) options;
 in
-  with pkgs.lib; {
+  with lib; {
     imports = [];
     options = {
       clients =
-        mkOption {
+        options.mkOption {
           type = with lib.types; listOf {
             enabled = bool;
             rootPath = uniq str;
