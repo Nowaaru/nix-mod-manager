@@ -1,10 +1,13 @@
-{ nixpkgs }: 
+{pkgs ? import <nixpkgs> {}}: let
+  inherit (pkgs) lib;
 
-let
-  inherit (nixpkgs) lib;
-
-  recursiveApply = with lib.attrsets; what: to: 
-     foldl' (acc: k: v: acc[k]  (v what)) {} to;
-in recursiveApply {
-  fetchers = import ./fetchers.nix;
-} lib
+  st = w: builtins.trace w w;
+  recursiveApply = with lib.attrsets;
+    what: to:
+      foldlAttrs (acc: k: v: acc // lib.attrsets.setAttrByPath [(st k)] ((st v) what)) {} to;
+in
+  st (
+    recursiveApply {inherit pkgs;} {
+      fetchers = import ./fetchers.nix;
+    }
+  )

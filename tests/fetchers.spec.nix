@@ -1,11 +1,9 @@
-{
-  nixt,
-  ...
-}: let
-  inherit (nixt.lib) block it describe';
+{pkgs ? import <nixpkgs> {}}: let
+  inherit (pkgs) lib;
+  inherit (import ../lib {inherit pkgs;}) fetchers;
 in
-  block ./fetchers.spec.nix [
-    (describe' "GameBanana" [
-      (it "should fetch this module" true)
-    ])
-  ]
+  with lib.debug;
+    fetchers.fetchGameBanana {
+      modId = 500153;
+      downloadId = 1153304;
+    }
