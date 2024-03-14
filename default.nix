@@ -7,6 +7,7 @@
   inherit (pkgs) lib;
   inherit (lib) options;
 
+  st = w: builtins.trace w w;
   cfg = config.programs.nix-mod-manager;
 in
   with lib; {
@@ -36,10 +37,10 @@ in
 
     config = mkIf cfg.enable {
       home.activation = {
-        nix-mod-manager-deploy = lib.hm.dag.entryAnywhere ''
+        nix-mod-manager-deploy = home-manager.lib.hm.dag.entryAnywhere ''
           echo "Noire's Nix Mod Manager has started deploying."
         '';
-        nix-mod-manager-cleanup = lib.hm.dag.dagAfter ["nix-mod-manager-deploy"] ''
+        nix-mod-manager-cleanup = home-manager.lib.hm.dag.entryAfter ["nix-mod-manager-deploy"] ''
           echo "Noire's Nix Mod Manager has finished deploying."
         '';
       };
