@@ -37,8 +37,8 @@ in
 
     config = let
       sorted_mods = attrsets.foldlAttrs (acc: k: v: acc // {${k} = (home-manager.lib.hm.dag.topoSort v.mods).result;}) {} cfg.clients;
-      mod_links = attrsets.foldlAttrs (acc: k: v: acc + "ln ${v.data} ${cfg.clients [k].modsPath}\n") [] sorted_mods;
-      all_deploy = attrsets.foldlAttrs (_: _: v: acc + v) [] mod_links;
+      mod_links = attrsets.foldl' (acc: v: acc + "ln ${v.data} ${cfg.clients [k].modsPath}\n") [] sorted_mods;
+      all_deploy = attrsets.foldl' (_: _: v: acc + v) [] mod_links;
     in
       mkIf cfg.enable {
         home.activation = {
