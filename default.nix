@@ -4,6 +4,8 @@
   home-manager,
   ...
 }: let
+  inherit (import ./types.nix pkgs) mods;
+
   inherit (pkgs) lib;
   inherit (lib) options;
 
@@ -14,49 +16,68 @@ in
     imports = [];
     options = {
       programs = {
-        nix-mod-manager = with lib.options; {
-          enable = mkOption {
-            type = with lib.types; bool;
-            default = false;
-          };
+        nix-mod-manager = with options; {
+          enable = mkEnableOption "nix-mod-manager";
 
           clients = mkOption {
             default = [];
-            type = with lib.types;
-              listOf {
-                enabled = bool;
-                rootPath = uniq str;
-                modsPath = uniq str;
+            type = with types; let
+              submodule-type = submodule {
+                options = {
+                  enable = mkEnableOption "the client";
 
-                mods = with lib.hm.types; dagOf package;
-              };
+                  rootPath = mkOption {
+                    type = uniq str;
+                  };
+
+                  modsPath = mkOption {
+                    type = uniq str;
+                  };
+
+                  mods = mkOption {
+                    type = either (home-manager.lib.hm.types.dagOf mod) (listOf mod);
+                  };
+                };
+              }; # comment because nix stack traces are fucking abysmal
+            in
+              either (attrsOf submodule-type) (listOf submodule-type);
           };
         };
       };
     };
 
+    /*
+    TODO: make derivation for every client that copies the mods into the modspath folder
+    FIXME: my laziness
+    */
     config = let
-      sorted_mods = attrsets.foldlAttrs (acc: k: v: acc // {${k} = (home-manager.lib.hm.dag.topoSort v.mods).result;}) {} cfg.clients;
-      mod_links = attrsets.foldl' (acc: v: acc + "ln ${v.data} ${cfg.clients [k].modsPath}\n") [] sorted_mods;
-      all_deploy = attrsets.foldl' (_: _: v: acc + v) [] mod_links;
+      inherit (cfg) clients;
+      clients-to-deploy =
+        attrsets.foldlAttrs
+        (acc: k: v: let
+          sorted = home-manager.lib.hm.dag.topoSort v.mods;
+          isSorted = sorted ? "result";
+        in
+          acc
+          // {
+            ${k} =
+              if isSorted
+              then sorted.result
+              else abort "mods were not sorted; possible circular dependency loop?";
+          }) {}
+        clients;
+      # attrsets.foldlAttrs (acc: k: v: acc ++ "echo ${st k} - ${lists.foldl' (acc: v: "${acc}${v.data}\n") "" (st v)}\n") "" clients-to-deploy;
     in
       mkIf cfg.enable {
         home.activation = {
           nix-mod-manager-deploy = home-manager.lib.hm.dag.entryAnywhere ''
             echo "Noire's Nix Mod Manager has started deploying."
-            ${all_deploy}
+            echo ${builtins.typeOf (home-manager.lib.hm.dag.entryAnywhere "lol ok").data}
+            echo data: ${builtins.typeOf (clients.monster-hunter-world.mods.test-mod-1).data}
           '';
           nix-mod-manager-cleanup = home-manager.lib.hm.dag.entryAfter ["nix-mod-manager-deploy"] ''
             echo "Noire's Nix Mod Manager has finished deploying."
           '';
         };
-        # systemd.services.nix-mod-manager = {
-        #   wantedBy = ["multi-user.target"];
-        #   serviceConfig = {
-        #     Type = "notify";
-        #     ExecStart = ''echo "Nix Mod Manager has started deploying."'';
-        #     ExecStop = ''echo "Nix Mod Manager has finished running.'';
-        #   };
-        # };
       };
   }
