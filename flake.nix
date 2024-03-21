@@ -32,6 +32,6 @@
       '';
     };
 
-    homeManagerModules.default = args: import ./. (args // {inherit home-manager;});
+    homeManagerModules.default = args: import ./. (args // {inherit pkgs home-manager;});
   };
 }
