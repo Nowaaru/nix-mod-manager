@@ -19,8 +19,10 @@
   } @ inputs: let
     pkgs = import nixpkgs {
       system = "x86_64-linux";
-      overlays = [ rust-overlay.overlays.default ];
+      overlays = [rust-overlay.overlays.default];
     };
+
+    st = w: builtins.trace w w;
   in {
     devShells.x86_64-linux.default = pkgs.mkShell {
       inputsFrom = [];
@@ -30,6 +32,6 @@
       '';
     };
 
-    nixosModules.default = {config, ...}: import ./. {inherit pkgs home-manager config;};
+    homeManagerModules.default = args: import ./. (args // {inherit home-manager;});
   };
 }
