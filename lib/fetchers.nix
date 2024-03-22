@@ -8,6 +8,7 @@
   areListValues = qualifier: with lib.lists; all qualifier;
   valuesExist = keys:
     with lib.lists; all (i: builtins.hasAttr keys);
+  st = w: builtins.trace w w;
 in {
   /*
   TODO: make a fetchMod function that uses
@@ -32,24 +33,32 @@ in {
       outputs = ["out"];
     };
 
-  fetchGameBanana = {downloadId, ...}:
-    with lib;
-      if true
-      # (asserts.assertMsg (valuesExist ["modId" "downloadId"] traits) "all '...Id' fields are required") &&
-      # (asserts.assertMsg (areListValues builtins.isInt) [traits.modId traits.downloadId] "all '...Id' fields need to be an integer")
-      then
-        with pkgs.stdenv;
-          mkDerivation {
-            # TODO:
-            # curl this link and then read the output so i can get the mod file
-            # and then fill it into files.gamebanana.com
-            # "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=500113&fields=Files().aFiles()"
-          }
-          pkgs.fetchurl {
-            # url = "https://gamebanana.com/mods/download/${builtins.toString traits.modId}#FileInfo_${builtins.toString traits.downloadId}";
-            url = "https://gamebanana.com/dl/${builtins.toString downloadId}";
-            hash = "sha256-EE5UgIX11w3uenbENh26LDTMQP5uOgTGQkbDMZFE8eo=";
-            curlOptsList = [''-H "Accept: application/json"''];
-          }
-      else {};
+  fetchGameBanana = {
+    name,
+    hash ? lib.fakeHash,
+  }:
+    with pkgs.stdenv; let
+      url = "https://files.gamebanana.com/mods/${name}";
+    in
+      mkDerivation {
+        name = "${lib.strings.nameFromURL url "."}";
+
+        src = builtins.fetchurl {
+          inherit url;
+          sha256 = hash;
+        };
+
+        unpackPhase = "true";
+
+        installPhase = ''
+          cp $src $out;
+          sync;
+        '';
+      };
+  # pkgs.fetchurl {
+  #   # url = "https://gamebanana.com/mods/download/${builtins.toString traits.modId}#FileInfo_${builtins.toString traits.downloadId}";
+  #   url = "https://gamebanana.com/dl/${builtins.toString downloadId}";
+  #   hash = "sha256-EE5UgIX11w3uenbENh26LDTMQP5uOgTGQkbDMZFE8eo=";
+  #   curlOptsList = [''-H "Accept: application/json"''];
+  # }
 }
