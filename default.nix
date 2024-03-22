@@ -11,7 +11,7 @@ with lib; let
   inherit (lib) options;
   cfg = config.programs.nix-mod-manager;
 
-  st = w: builtins.trace ("type: ${w}") w;
+  st = w: builtins.trace "type: ${w}" w;
 in {
   imports = [];
 
@@ -88,48 +88,51 @@ in {
               (mkIf (!p) no)
             ];
 
-          deriv-filetype =
-            st (builtins.readFile
+          deriv-filetype = st (builtins.readFile
             (
-              pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} ''
-                ${pkgs.file}/bin/file --mime-encoding -bN "${st deriv.outPath}" > $out;
-              ''
+              pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} (
+                st ''
+                  #/usr/bin/env bash
+
+                  echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
+                ''
+              )
             )
             .outPath);
+
+          archiveExtractor = with pkgs;
+            if (deriv-filetype == "application/x-rar")
+            then rar
+            else
+              (
+                if (deriv-filetype == "application/zip" && cfg.forceGnuUnzip)
+                then unzip
+                else p7zip
+              );
         in
           with pkgs;
             stdenv.mkDerivation {
               name = "nmm-mod-${deriv.name}";
 
               nativeBuildInputs = [
-                (
-                  if (deriv-filetype == "application/x-rar")
-                 then rar
-                  else
-                    (
-                      if (deriv-filetype == "application/zip" && cfg.forceGnuUnzip)
-                      then unzip
-                      else p7zip
-                    )
-                )
+                archiveExtractor
               ];
 
-              unpackPhase = ''
-                #/usr/bin/env bash
+              unpackPhase = let
+                handler =
+                  if (archiveExtractor == p7zip)
+                  then ''"${p7zip}/bin/7z x ${deriv.outPath} -o"$out"''
+                  else if (archiveExtractor == unzip)
+                  then ''${unzip}/bin/unzip ${deriv.outPath} -d "$out"''
+                  else if (archiveExtractor == rar)
+                  then ''${rar}/bin/rar e -op"$out" ${deriv.outPath}''
+                  else abort "unable to find correct extractor handler for ${archiveExtractor.name}";
+              in
+                st ''
+                  #/usr/bin/env bash
 
-                if [ ("${deriv-filetype}" == "application/x-rar") ]; then
-                  ${pkgs.rar}/bin/rar e -op"$out" ${deriv.outPath};
-                else
-                  if [ ("${deriv-filetype}" == "application/zip") ]; then
-                    if ${builtins.toString cfg.forceGnuUnzip}; then
-                      ${pkgs.unzip}/bin/unzip ${deriv.outPath} -d "$out";
-                      return 0;
-                    fi;
-                  fi;
-
-                  ${pkgs.p7zip}/bin/7z x ${deriv.outPath} -o"$out";
-                fi;
-              '';
+                  ${handler};
+                '';
             };
 
         deriv = stdenv: let
@@ -144,14 +147,23 @@ in {
           */
           mass-link-deriv-list-to = where:
             lists.foldl (acc: v: acc + "${v}\n") ""
-            (lists.imap0 (l: w: ''ln -s "${(deploy-mod-deriv w.data).outPath}" "${where}/${builtins.toString l}-${w.name}"'') v);
+            (lists.imap0 (l: w: let
+                deployed-deriv = deploy-mod-deriv w.data;
+                out-path =  "${where}/${builtins.toString l}-${w.name}";
+              in ''
+                
+                # MOD: ${w.name};
+                mkdir -p ${out-path};
+                ln -s "${deployed-deriv.outPath}"/* ${out-path};
+              '')
+              v);
         in
           with stdenv;
             mkDerivation {
               name = "nmm-client-${k}";
               unpackPhase = "true";
 
-              installPhase = ''
+              installPhase = st ''
                 ${mass-link-deriv-list-to "$out"}
               '';
             };
