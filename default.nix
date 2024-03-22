@@ -11,12 +11,14 @@ with lib; let
   inherit (lib) options;
   cfg = config.programs.nix-mod-manager;
 
-  st = w: builtins.trace w w;
+  st = w: builtins.trace ("type: ${w}") w;
 in {
   imports = [];
 
   options.programs.nix-mod-manager = with options; {
     enable = mkEnableOption "nix-mod-manager";
+    forceGnuUnzip = mkEnableOption "unzipping using GNU unzip.";
+
     clients = mkOption {
       default = {};
       type = with types; let
@@ -35,6 +37,12 @@ in {
             mods = mkOption {
               type = home-manager.lib.hm.types.dagOf mod;
             };
+
+            /*
+            TODO: when using the `list` mod option, change
+            names to the download output instead of the list
+            index
+            */
           };
         };
       in
@@ -66,33 +74,116 @@ in {
     client-deployers =
       attrsets.foldlAttrs
       (acc: k: v: let
-        deriv = {stdenv, ...}:
+        /*
+        TODO:
+        instead of making a new derivation from the already-fetched
+        mod derivation (which can end up taking a LOT of space),
+        make the fetchers do the detection so we don't have the
+        compressed file + the decompressed contents
+        */
+        deploy-mod-deriv = deriv: let
+          mkIfElse = p: yes: no:
+            mkMerge [
+              (mkIf p yes)
+              (mkIf (!p) no)
+            ];
+
+          deriv-filetype =
+            st (builtins.readFile
+            (
+              pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} ''
+                ${pkgs.file}/bin/file --mime-encoding -bN "${st deriv.outPath}" > $out;
+              ''
+            )
+            .outPath);
+        in
+          with pkgs;
+            stdenv.mkDerivation {
+              name = "nmm-mod-${deriv.name}";
+
+              nativeBuildInputs = [
+                (
+                  if (deriv-filetype == "application/x-rar")
+                 then rar
+                  else
+                    (
+                      if (deriv-filetype == "application/zip" && cfg.forceGnuUnzip)
+                      then unzip
+                      else p7zip
+                    )
+                )
+              ];
+
+              unpackPhase = ''
+                #/usr/bin/env bash
+
+                if [ ("${deriv-filetype}" == "application/x-rar") ]; then
+                  ${pkgs.rar}/bin/rar e -op"$out" ${deriv.outPath};
+                else
+                  if [ ("${deriv-filetype}" == "application/zip") ]; then
+                    if ${builtins.toString cfg.forceGnuUnzip}; then
+                      ${pkgs.unzip}/bin/unzip ${deriv.outPath} -d "$out";
+                      return 0;
+                    fi;
+                  fi;
+
+                  ${pkgs.p7zip}/bin/7z x ${deriv.outPath} -o"$out";
+                fi;
+              '';
+            };
+
+        deriv = stdenv: let
+          /*
+          install phase:
+          after turning the client mod DAG into a list of
+          fetch(source, i.e. GameBanana) derivations, symlink
+          the out directory into the directory of the `deriv` output.
+
+          home manager final:
+          link the modsPath to the `deriv` output.
+          */
+          mass-link-deriv-list-to = where:
+            lists.foldl (acc: v: acc + "${v}\n") ""
+            (lists.imap0 (l: w: ''ln -s "${(deploy-mod-deriv w.data).outPath}" "${where}/${builtins.toString l}-${w.name}"'') v);
+        in
           with stdenv;
             mkDerivation {
               name = "nmm-client-${k}";
               unpackPhase = "true";
-              buildPhase = ''
-                mkdir $out;
+
+              installPhase = ''
+                ${mass-link-deriv-list-to "$out"}
               '';
-              installPhase = lists.foldl (acc: v: acc + "echo mod found: ${v.name};") "echo gottem;" clients-to-deploy.${k};
             };
       in
         acc
         // {
           ${k} =
             if acc ? k
-            then acc.${k} ++ [(deriv pkgs)]
-            else [(deriv pkgs)];
+            then acc.${k} ++ [(deriv pkgs.stdenv)]
+            else [(deriv pkgs.stdenv)];
         }) {}
       clients-to-deploy;
     # attrsets.foldlAttrs (acc: k: v: acc ++ "echo ${st k} - ${lists.foldl' (acc: v: "${acc}${v.data}\n") "" (st v)}\n") "" clients-to-deploy;
+    /*
+    PLAN: for every mod derivation, index the `.outPath`.
+    this should contain one file. use the `file` command
+    as a build input to determine the filetype.
+
+    if it is a zip, then use unzip.
+    if it's a tar.gz, then use tar xf.
+    if it's a rar, then use rar (but require the user to enable unfree packages!!)
+    if it's a 7z, then use p7zip.
+
+    if it's none of these, prompt the user to write their own builder.
+    */
   in
     mkIf cfg.enable {
       home.activation = {
         nix-mod-manager-deploy = dag.entryAnywhere ''
           echo "Noire's Nix Mod Manager has started deploying."
-          echo ${builtins.typeOf (dag.entryAnywhere "lol ok").data}
-          echo ${builtins.elemAt client-deployers.monster-hunter-world 0}
+          echo "it's lol time"
+          echo "elem at: ${builtins.elemAt client-deployers.monster-hunter-world 0}"
         '';
         nix-mod-manager-cleanup = dag.entryAfter ["nix-mod-manager-deploy"] ''
           echo "Noire's Nix Mod Manager has finished deploying."

@@ -19,6 +19,9 @@
   } @ inputs: let
     pkgs = import nixpkgs {
       system = "x86_64-linux";
+      config = {
+        allowUnfree = true;
+      };
       overlays = [rust-overlay.overlays.default];
     };
 
@@ -31,6 +34,10 @@
         export DEBUG=1
       '';
     };
+
+    lib = pkgs.lib.extend (_: prev: {
+      nnmm = import ./lib {inherit pkgs;};
+    });
 
     homeManagerModules.default = args: import ./. (args // {inherit pkgs home-manager;});
   };
