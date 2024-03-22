@@ -72,110 +72,121 @@ in {
       clients;
 
     client-deployers =
-      attrsets.foldlAttrs
-      (acc: k: v: let
-        /*
-        TODO:
-        instead of making a new derivation from the already-fetched
-        mod derivation (which can end up taking a LOT of space),
-        make the fetchers do the detection so we don't have the
-        compressed file + the decompressed contents
-        */
-        deploy-mod-deriv = deriv: let
-          mkIfElse = p: yes: no:
-            mkMerge [
-              (mkIf p yes)
-              (mkIf (!p) no)
-            ];
-
-          deriv-filetype = st (builtins.readFile
-            (
-              pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} (
-                st ''
-                  #/usr/bin/env bash
-
-                  echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
-                ''
-              )
-            )
-            .outPath);
-
-          archiveExtractor = with pkgs;
-            if (deriv-filetype == "application/x-rar")
-            then rar
-            else
-              (
-                if (deriv-filetype == "application/zip" && cfg.forceGnuUnzip)
-                then unzip
-                else p7zip
-              );
-        in
-          with pkgs;
-            stdenv.mkDerivation {
-              name = "nmm-mod-${deriv.name}";
-
-              nativeBuildInputs = [
-                archiveExtractor
+      attrsets.mapAttrs
+      (
+        k: v: let
+          /*
+          TODO:
+          instead of making a new derivation from the already-fetched
+          mod derivation (which can end up taking a LOT of space),
+          make the fetchers do the detection so we don't have the
+          compressed file + the decompressed contents
+          */
+          deploy-mod-deriv = deriv: let
+            mkIfElse = p: yes: no:
+              mkMerge [
+                (mkIf p yes)
+                (mkIf (!p) no)
               ];
 
-              unpackPhase = let
-                handler =
-                  if (archiveExtractor == p7zip)
-                  then ''"${p7zip}/bin/7z x ${deriv.outPath} -o"$out"''
-                  else if (archiveExtractor == unzip)
-                  then ''${unzip}/bin/unzip ${deriv.outPath} -d "$out"''
-                  else if (archiveExtractor == rar)
-                  then ''${rar}/bin/rar e -op"$out" ${deriv.outPath}''
-                  else abort "unable to find correct extractor handler for ${archiveExtractor.name}";
-              in
-                st ''
-                  #/usr/bin/env bash
+            deriv-filetype = st (builtins.readFile
+              (
+                pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} (
+                  st ''
+                    #/usr/bin/env bash
 
-                  ${handler};
+                    echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
+                  ''
+                )
+              )
+              .outPath);
+
+            archiveExtractor = with pkgs;
+              if (deriv-filetype == "application/x-rar")
+              then rar
+              else
+                (
+                  if (deriv-filetype == "application/zip" && cfg.forceGnuUnzip)
+                  then unzip
+                  else p7zip
+                );
+          in
+            with pkgs;
+              stdenv.mkDerivation {
+                name = "nmm-mod-${deriv.name}";
+
+                nativeBuildInputs = [
+                  archiveExtractor
+                ];
+
+                unpackPhase = let
+                  handler =
+                    if (archiveExtractor == p7zip)
+                    then ''"${p7zip}/bin/7z x ${deriv.outPath} -o"$out"''
+                    else if (archiveExtractor == unzip)
+                    then ''${unzip}/bin/unzip ${deriv.outPath} -d "$out"''
+                    else if (archiveExtractor == rar)
+                    then ''${rar}/bin/rar e -op"$out" ${deriv.outPath}''
+                    else abort "unable to find correct extractor handler for ${archiveExtractor.name}";
+                in
+                  st ''
+                    #/usr/bin/env bash
+
+                    ${handler};
+                  '';
+              };
+
+          deriv = stdenv: let
+            /*
+            install phase:
+            after turning the client mod DAG into a list of
+            fetch(source, i.e. GameBanana) derivations, symlink
+            the out directory into the directory of the `deriv` output.
+
+            home manager final:
+            link the modsPath to the `deriv` output.
+            */
+            mass-link-deriv-list-to = where:
+              lists.foldl (acc: v: acc + "${v}\n") ""
+              (lists.imap0 (l: w: let
+                  deployed-deriv = deploy-mod-deriv w.data;
+                  out-path = "${where}/${builtins.toString l}-${w.name}";
+                in ''
+
+                  # MOD: ${w.name};
+                  mkdir -p ${out-path};
+                  ln -s "${deployed-deriv.outPath}"/* ${out-path};
+                '')
+                v);
+          in
+            with stdenv;
+              mkDerivation {
+                name = "nmm-client-${k}";
+                unpackPhase = "true";
+
+                installPhase = st ''
+                  ${mass-link-deriv-list-to "$out"}
                 '';
-            };
-
-        deriv = stdenv: let
-          /*
-          install phase:
-          after turning the client mod DAG into a list of
-          fetch(source, i.e. GameBanana) derivations, symlink
-          the out directory into the directory of the `deriv` output.
-
-          home manager final:
-          link the modsPath to the `deriv` output.
-          */
-          mass-link-deriv-list-to = where:
-            lists.foldl (acc: v: acc + "${v}\n") ""
-            (lists.imap0 (l: w: let
-                deployed-deriv = deploy-mod-deriv w.data;
-                out-path =  "${where}/${builtins.toString l}-${w.name}";
-              in ''
-                
-                # MOD: ${w.name};
-                mkdir -p ${out-path};
-                ln -s "${deployed-deriv.outPath}"/* ${out-path};
-              '')
-              v);
+              };
         in
-          with stdenv;
-            mkDerivation {
-              name = "nmm-client-${k}";
-              unpackPhase = "true";
-
-              installPhase = st ''
-                ${mass-link-deriv-list-to "$out"}
-              '';
-            };
-      in
-        acc
-        // {
-          ${k} =
-            if acc ? k
-            then acc.${k} ++ [(deriv pkgs.stdenv)]
-            else [(deriv pkgs.stdenv)];
-        }) {}
+          deriv pkgs.stdenv
+      )
       clients-to-deploy;
+
+    nix-mod-manager-final = with pkgs.stdenv;
+      mkDerivation {
+        name = "nix-mod-manager";
+        unpackPhase = "true";
+
+        installPhase = foldlAttrs (acc: k: v:
+          acc
+          + ''
+            # ${v.name}
+            mkdir -p $out/${k};
+            ln -s ${v.outPath}/* $out/${k};''\n''\n
+          '') ""
+        client-deployers;
+      };
     # attrsets.foldlAttrs (acc: k: v: acc ++ "echo ${st k} - ${lists.foldl' (acc: v: "${acc}${v.data}\n") "" (st v)}\n") "" clients-to-deploy;
     /*
     PLAN: for every mod derivation, index the `.outPath`.
@@ -190,16 +201,19 @@ in {
     if it's none of these, prompt the user to write their own builder.
     */
   in
-    mkIf cfg.enable {
-      home.activation = {
-        nix-mod-manager-deploy = dag.entryAnywhere ''
-          echo "Noire's Nix Mod Manager has started deploying."
-          echo "it's lol time"
-          echo "elem at: ${builtins.elemAt client-deployers.monster-hunter-world 0}"
-        '';
-        nix-mod-manager-cleanup = dag.entryAfter ["nix-mod-manager-deploy"] ''
-          echo "Noire's Nix Mod Manager has finished deploying."
-        '';
-      };
-    };
+    mkIf cfg.enable ({
+      home.file = {
+        nix-mod-manager = {
+          enable = true;
+          recursive = true;
+          source = nix-mod-manager-final.outPath;
+          target = ".local/share/nix-mod-manager";
+        };
+      } // (attrsets.mapAttrs (name: value: {
+        enable = true;
+        recursive = true;
+        target = value.modsPath;
+        source = nix-mod-manager-final.outPath + "/${name}";
+      }) clients);
+    } );
 }
