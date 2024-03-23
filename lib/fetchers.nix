@@ -5,7 +5,6 @@
   (noire-utils)
   */
   inherit (pkgs) lib;
-  st = w: builtins.trace w w;
 in rec {
   /*
   TODO: make a fetchMod function that uses
@@ -17,30 +16,40 @@ in rec {
   TODO: have fetchGameBanana utilize the fetchMod
   function
   */
+  mkLocalMod = {
+    name,
+    store-path,
+  }:
+    with pkgs.stdenv;
+      mkDerivation {
+        inherit name;
+        src = store-path;
+
+        phases = ["installPhase"];
+        installPhase = ''cp $src $out'';
+      };
+
   fetchMod = {
     name ? "${lib.strings.nameFromURL url}",
     url,
     hash ? lib.fakeHash,
   }:
-    with pkgs.stdenv;
-      mkDerivation {
-        inherit name;
+    mkLocalMod
+    {
+      inherit name;
 
-        src = builtins.fetchurl {
-          inherit name url;
-          sha256 = hash;
-        };
-
-        phases = ["installPhase"];
-
-        installPhase = ''cp $src $out'';
+      store-path = builtins.fetchurl {
+        inherit name url;
+        sha256 = hash;
       };
+    };
 
   fetchGameBanana = {
     name,
     hash ? lib.fakeHash,
   }:
-    fetchMod {
+    fetchMod
+    {
       inherit name hash;
       url = "https://files.gamebanana.com/mods/${name}";
     };
