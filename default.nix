@@ -17,7 +17,7 @@ in {
 
   options.programs.nix-mod-manager = with options; {
     enable = mkEnableOption "nix-mod-manager";
-    forceGnuUnzip = mkEnableOption "unzipping using GNU unzip.";
+    forceGnuUnzip = mkEnableOption "unzipping using GNU unzip";
 
     clients = mkOption {
       default = {};
@@ -31,7 +31,7 @@ in {
             };
 
             modsPath = mkOption {
-              type = uniq str;
+              type = uniq str; # huh
             };
 
             mods = mkOption {
@@ -122,11 +122,11 @@ in {
                 unpackPhase = let
                   handler =
                     if (archiveExtractor == p7zip)
-                    then ''"${p7zip}/bin/7z x ${deriv.outPath} -o"$out"''
+                    then ''"${p7zip}/bin/7z x "${deriv.outPath}" -o"$out"''
                     else if (archiveExtractor == unzip)
-                    then ''${unzip}/bin/unzip ${deriv.outPath} -d "$out"''
+                    then ''${unzip}/bin/unzip "${deriv.outPath}" -d "$out"''
                     else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar e -op"$out" ${deriv.outPath}''
+                    then ''${rar}/bin/rar e -op"$out" "${deriv.outPath}"''
                     else abort "unable to find correct extractor handler for ${archiveExtractor.name}";
                 in
                   st ''
@@ -201,19 +201,25 @@ in {
     if it's none of these, prompt the user to write their own builder.
     */
   in
-    mkIf cfg.enable ({
-      home.file = {
-        nix-mod-manager = {
-          enable = true;
-          recursive = true;
-          source = nix-mod-manager-final.outPath;
-          target = ".local/share/nix-mod-manager";
-        };
-      } // (attrsets.mapAttrs (name: value: {
-        enable = true;
-        recursive = true;
-        target = value.modsPath;
-        source = nix-mod-manager-final.outPath + "/${name}";
-      }) clients);
-    } );
+    mkIf cfg.enable {
+      home.file =
+        {
+          nix-mod-manager = {
+            enable = true;
+            recursive = true;
+            source = nix-mod-manager-final.outPath;
+            target = ".local/share/nix-mod-manager";
+          };
+        }
+        // (attrsets.mapAttrs (name: value: {
+            enable = true;
+            recursive = true;
+            target =
+              if value ? "modsPath"
+              then "${value.rootPath}/${value.modsPath}"
+              else value.rootPath;
+            source = nix-mod-manager-final.outPath + "/${name}";
+          })
+          clients);
+    };
 }

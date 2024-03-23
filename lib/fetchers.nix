@@ -5,11 +5,8 @@
   (noire-utils)
   */
   inherit (pkgs) lib;
-  areListValues = qualifier: with lib.lists; all qualifier;
-  valuesExist = keys:
-    with lib.lists; all (i: builtins.hasAttr keys);
   st = w: builtins.trace w w;
-in {
+in rec {
   /*
   TODO: make a fetchMod function that uses
   the `pkgs.file` package to check the file
@@ -21,40 +18,35 @@ in {
   function
   */
   fetchMod = {
-    name ? "mod",
+    name ? "${lib.strings.nameFromURL url}",
     url,
     hash ? lib.fakeHash,
-  } @ mod-data:
-    derivation
-    {
-      inherit name;
-      system = builtins.currentSystem;
-
-      outputs = ["out"];
-    };
-
-  fetchGameBanana = {
-    name,
-    hash ? lib.fakeHash,
   }:
-    with pkgs.stdenv; let
-      url = "https://files.gamebanana.com/mods/${name}";
-    in
+    with pkgs.stdenv;
       mkDerivation {
-        name = "${lib.strings.nameFromURL url "."}";
+        inherit name;
 
         src = builtins.fetchurl {
-          inherit url;
+          inherit name url;
           sha256 = hash;
         };
 
-        unpackPhase = "true";
+        unpackPhase = ''true'';
 
         installPhase = ''
           cp $src $out;
           sync;
         '';
       };
+
+  fetchGameBanana = {
+    name,
+    hash ? lib.fakeHash,
+  }:
+    fetchMod {
+      inherit name hash;
+      url = "https://files.gamebanana.com/mods/${name}";
+    };
   # pkgs.fetchurl {
   #   # url = "https://gamebanana.com/mods/download/${builtins.toString traits.modId}#FileInfo_${builtins.toString traits.downloadId}";
   #   url = "https://gamebanana.com/dl/${builtins.toString downloadId}";
