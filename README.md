@@ -2,10 +2,10 @@
 	<img src = "https://github.com/Nowaaru/nix-mod-manager/assets/16274568/e818c366-f4b4-4dde-9ca7-bff3dc1523b8"/ width=164>
         <h3> 
 		nix-mod-manager
-		<h6> the purest mod manager for home-manager</h6>
+		<h6> the purest mod manager for home-manager		<br />-•-<br/>
+			 <a href = "#-getting-started">getting started</a> · <a href="#-contributing">contributing</a> · <a href="#%EF%B8%8F-customization">customization</a></h6>
 	</h3>
 	<h6>
-	    <a href = "#-getting-started">getting started</a> · <a href="#-contributing">contributing</a> · <a href="#%EF%B8%8F-customization">customization</a>
         </h6>
         <img alt="GitHub License" src="https://img.shields.io/github/license/Nowaaru/nix-mod-manager?style=flat-square&logo=license&logoColor=%23D9E0EE&labelColor=%23302D41&color=%23F2CDCD"/>
         <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Nowaaru/nix-mod-manager?style=flat-square&labelColor=%23302D41&color=%2389ADF3"/>
