@@ -17,7 +17,7 @@ in rec {
   function
   */
   mkLocalMod = {
-    name,
+    name ? "mod",
     store-path,
   }:
     with pkgs.stdenv;
@@ -45,7 +45,7 @@ in rec {
     };
 
   fetchGameBanana = {
-    name,
+    name ? "gb-mod-${hash}",
     hash ? lib.fakeHash,
   }:
     fetchMod
