@@ -89,17 +89,16 @@ in {
                 (mkIf (!p) no)
               ];
 
-            deriv-filetype = st (builtins.readFile
+            deriv-filetype =
+              builtins.readFile
               (
-                pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} (
-                  st ''
-                    #/usr/bin/env bash
+                pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} ''
+                  #/usr/bin/env bash
 
-                    echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
-                  ''
-                )
+                  echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
+                ''
               )
-              .outPath);
+              .outPath;
 
             archiveExtractor = with pkgs;
               if (deriv-filetype == "application/x-rar")
@@ -122,18 +121,18 @@ in {
                 unpackPhase = let
                   handler =
                     if (archiveExtractor == p7zip)
-                    then ''"${p7zip}/bin/7z x "${deriv.outPath}" -o"$out"''
+                    then ''${p7zip}/bin/7z x "${builtins.trace "extracting p7zip" deriv.outPath}" -y -o"$out"''
                     else if (archiveExtractor == unzip)
-                    then ''${unzip}/bin/unzip "${deriv.outPath}" -d "$out"''
+                    then ''${unzip}/bin/unzip "${builtins.trace "extracting unzip" deriv.outPath}" -d "$out"''
                     else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar e -op"$out" "${deriv.outPath}"''
-                    else abort "unable to find correct extractor handler for ${archiveExtractor.name}";
-                in
-                  st ''
-                    #/usr/bin/env bash
+                    then ''${rar}/bin/rar e -op"$out" "${builtins.trace "extracting rar" deriv.outPath}"''
+                    else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
+                in ''
+                  #/usr/bin/env bash
+                  mkdir $out;
 
-                    ${handler};
-                  '';
+                  ${handler};
+                '';
               };
 
           deriv = stdenv: let
@@ -150,12 +149,13 @@ in {
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let
                   deployed-deriv = deploy-mod-deriv w.data;
+                  x = builtins.trace deployed-deriv.drvPath deployed-deriv;
                   out-path = "${where}/${builtins.toString l}-${w.name}";
                 in ''
 
                   # MOD: ${w.name};
                   mkdir -p ${out-path};
-                  ln -s "${deployed-deriv.outPath}"/* ${out-path};
+                  ln -s "${x}"/* ${out-path};
                 '')
                 v);
           in
@@ -164,7 +164,7 @@ in {
                 name = "nmm-client-${k}";
                 unpackPhase = "true";
 
-                installPhase = st ''
+                installPhase = ''
                   ${mass-link-deriv-list-to "$out"}
                 '';
               };
