@@ -25,6 +25,11 @@ in {
           options = {
             enable = mkEnableOption "the client";
 
+            deploymentType = mkOption {
+              type = enum ["loose" "organized"];
+              default = "organized";
+            };
+
             binaryPath = mkOption {
               type = str;
               default = ".";
@@ -145,11 +150,23 @@ in {
               (lists.imap0 (l: w: let
                   is-binary = w.data.passthru ? "binary" && w.data.passthru.binary;
                   deployed-deriv-path = (deploy-mod-deriv w.data).outPath;
+                  deployment-type = clients.${k}.deploymentType;
+
+                  root-out-path = "${root-where}/${modsPath}";
 
                   out-path =
                     if is-binary
                     then binary-where
-                    else "${root-where}/${modsPath}/${builtins.toString l}-${w.name}";
+                    else
+                      (
+                        /*
+                        TODO: turn this into an attrset
+                        at some point
+                        */
+                        if deployment-type == "organized"
+                        then "${root-out-path}/${builtins.toString l}-${w.name}"
+                        else root-out-path
+                      );
                 in ''
                   # MOD: ${w.name};
 

@@ -167,6 +167,43 @@ with lib.nnmm; with fetchers;
 }
 ```
 
+There is also a `deploymentType` option that allows you to determine how mods are placed in the modsPath. It requires one of `"organized"` or `"loose"`, but set to `"organized"` by default. The `loose` type will drop the artifacts directly into the staging `"modsPath"`, meanwhile the `"organized"` type will make a numerically sorted list of folders depending on the load order:
+
+
+```nix
+with lib.nnmm; with fetchers;
+{
+    programs.nix-mod-manager = {
+        enable = true;
+        clients = {
+            monster-hunter-world = {
+                enable = true;
+                modsPath = "nativePC";
+                deploymentType = "loose"; # 🌟
+                rootPath = ".local/share/Steam/steamapps/common/Monster Hunter World";
+
+                binaryMods = {
+                    example-binary-mod-0 = entryAnywhere (fetchGameBanana {
+                        name = "my-super-cool-gamebanana-mod";
+                        hash = lib.fakeHash;
+                    });
+                };
+
+                mods = {
+                    example-mod-0 = entryAfter ["example-binary-mod-0"] (mkLocalMod {
+                        name = "example-mod-0";
+                        store-path = /nix/store/...;
+                    });
+                    example-mod-1 = entryAfter ["example-binary-mod-1"] (mkLocalMod {
+                        name = "example-mod-1";
+                        store-path = /nix/store/...;
+                    });
+                };
+            };
+        };
+    };
+}
+```
 
 
 <h3>💙 Contributing</h3>
