@@ -2,7 +2,7 @@
         <h3> nix-mod-manager</h1>
 	    <h5> the purest mod manager for home-manager<br/><br/>-</h6>
         <h6>
-        <a href = "#-getting-started">getting started</a> · <a href="#contributing">contributing</a> · <a href="#%EF%B8%8F-customization">customization</a>
+        <a href = "#-getting-started">getting started</a> · <a href="#-contributing">contributing</a> · <a href="#%EF%B8%8F-customization">customization</a>
         </h6>
         <img alt="GitHub License" src="https://img.shields.io/github/license/Nowaaru/nix-mod-manager?style=flat-square&logo=license&logoColor=%23D9E0EE&labelColor=%23302D41&color=%23F2CDCD"/>
         <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Nowaaru/nix-mod-manager?style=flat-square&labelColor=%23302D41&color=%2389ADF3"/>
