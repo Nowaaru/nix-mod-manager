@@ -12,7 +12,7 @@
         <hr />
 </div>
 
-<h3>Getting Started</h3>
+<h3>🔰 Getting Started</h3>
 <ul>
 	  <h5>Requirements to Slay ⚔️</h5>
 
@@ -84,11 +84,11 @@ new module for your Home Manager configuration:
 
 nix-mod-manager's default module exports the `programs.nix-mod-manager` module for you to change to your liking. To see what fields you can customize, check out the <a href="#customization">customization index</a>.
 
-<h3>Library</h3>
+<h3>🧰 Library</h3>
 
 The nix-mod-manager's `lib` output contains the `nnmm` (noire's-nix-mod-manager) library. In this library contains a handful of useful functions for things like creating mod derivations through [referencing store files](https://github.com/Nowaaru/nix-mod-manager/blob/fd1a733b7ba5570b11711c85a5abf6736a2f3b62/lib/fetchers.nix#L19C1-L30) and [fetching from remote CDNs](https://github.com/Nowaaru/nix-mod-manager/blob/fd1a733b7ba5570b11711c85a5abf6736a2f3b62/lib/fetchers.nix#L32-L45).
 
-<h3>Customization</h3>
+<h3>⚙️ Customization</h3>
 nix-mod-manager exports the `programs.nix-mod-manager` module. For the module to work, the `enable` property must be set to true:
 ```nix
 {
@@ -165,7 +165,7 @@ with lib.nnmm; with fetchers;
 }
 ```
 
-<h3>Contributing</h3>
+<h3>💙 Contributing</h3>
 <h5>Pull Requests</h5>
 Generally, I'm okay to pull requests as long as the code is good and neat and follows the conventions that the project follows (or lines up closely enough to it). If your pull request takes a while to get merged while there appears to be no backlog, feel free to mention a maintainer or two - but overdoing it makes the whole process slower. It might even get your permissions to contribute revoked!
 <br/><br/>
