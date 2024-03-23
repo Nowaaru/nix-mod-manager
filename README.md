@@ -112,7 +112,7 @@ A game that is managed is called a **client.** The property is also aptly named 
 }
 
 ```
-A client requires a `modsPath` and a `binaryPath` to be functional. The `binaryPath` field should be relative to the `$HOME` (`~`) directory, and the `modsPath` field should be relative to the `binaryPath` field.
+A client requires a `modsPath` and a `rootPath` to be functional. The `rootPath` field should be relative to the `$HOME` (`~`) directory, and the `modsPath` field should be relative to the `rootPath` field. If necessary, you can specify a `binaryPath` for paired usage with binary mods.
 
 ```nix
 
@@ -123,7 +123,8 @@ A client requires a `modsPath` and a `binaryPath` to be functional. The `binaryP
             monster-hunter-world = {
                 enable = true;
                 modsPath = "nativePC";
-                binaryPath = ".local/share/Steam/steamapps/common/Monster Hunter World";
+                rootPath = ".local/share/Steam/steamapps/common/Monster Hunter World";
+                binaryPath = "bin/";
             };
         };
     };
@@ -140,7 +141,7 @@ with lib.nnmm; with fetchers;
             monster-hunter-world = {
                 enable = true;
                 modsPath = "nativePC";
-                binaryPath = ".local/share/Steam/steamapps/common/Monster Hunter World";
+                rootPath = ".local/share/Steam/steamapps/common/Monster Hunter World";
 
                 binaryMods = {
                     example-binary-mod-0 = entryAnywhere (fetchGameBanana {
@@ -164,6 +165,8 @@ with lib.nnmm; with fetchers;
     };
 }
 ```
+
+
 
 <h3>💙 Contributing</h3>
 <h5>Pull Requests</h5>

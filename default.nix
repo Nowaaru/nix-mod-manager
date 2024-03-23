@@ -9,6 +9,8 @@ with lib; let
   inherit (import ./types.nix lib) mod;
   inherit (lib) options;
   cfg = config.programs.nix-mod-manager;
+
+  st = w: builtins.trace w w;
 in {
   imports = [];
 
@@ -24,6 +26,11 @@ in {
             enable = mkEnableOption "the client";
 
             binaryPath = mkOption {
+              type = str;
+              default = ".";
+            };
+
+            rootPath = mkOption {
               type = uniq str;
             };
 
@@ -125,7 +132,7 @@ in {
                     else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                 in ''
                   #/usr/bin/env bash
-                  mkdir -p $out;
+                  mkdir -vp $out;
 
                   ${handler};
                   sync;
@@ -133,33 +140,35 @@ in {
               };
 
           deriv = stdenv: let
-            mass-link-deriv-list-to = binary-where:
+            mass-link-deriv-list-to = root-where: binary-where:
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let
                   is-binary = w.data.passthru ? "binary" && w.data.passthru.binary;
                   deployed-deriv-path = (deploy-mod-deriv w.data).outPath;
+
                   out-path =
                     if is-binary
                     then binary-where
-                    else "${binary-where}/${modsPath}/${builtins.toString l}-${w.name}";
+                    else "${root-where}/${modsPath}/${builtins.toString l}-${w.name}";
                 in ''
                   # MOD: ${w.name};
-                  mkdir -p ${out-path};
+
+                  mkdir -vp ${out-path};
                   ls -la ${out-path}/**;
                   cp --no-preserve=mode -frs "${deployed-deriv-path}"/* "${out-path}";
                 '')
                 v);
-            inherit (clients.${k}) modsPath;
+            inherit (clients.${k}) modsPath binaryPath;
           in
             with stdenv;
               mkDerivation {
                 name = "nmm-client-${k}";
                 unpackPhase = ''
-                  mkdir -p $out/${modsPath};
+                  mkdir -vp $out/${modsPath};
                 '';
 
                 installPhase = ''
-                  ${mass-link-deriv-list-to "$out"}
+                  ${mass-link-deriv-list-to "$out" "$out/${binaryPath}"}
                 '';
               };
         in
@@ -176,7 +185,7 @@ in {
           acc
           + ''
             # ${v.name}
-            mkdir -p $out/${k};
+            mkdir -vp $out/${k};
             ln -s ${v.outPath}/* $out/${k};''\n''\n
           '') ""
         client-deployers;
