@@ -10,8 +10,6 @@ with lib; let
   inherit (import ./types.nix lib) mod;
   inherit (lib) options;
   cfg = config.programs.nix-mod-manager;
-
-  st = w: builtins.trace "type: ${w}" w;
 in {
   imports = [];
 
@@ -136,15 +134,6 @@ in {
               };
 
           deriv = stdenv: let
-            /*
-            install phase:
-            after turning the client mod DAG into a list of
-            fetch(source, i.e. GameBanana) derivations, symlink
-            the out directory into the directory of the `deriv` output.
-
-            home manager final:
-            link the modsPath to the `deriv` output.
-            */
             mass-link-deriv-list-to = binary-where:
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let
@@ -193,7 +182,6 @@ in {
           '') ""
         client-deployers;
       };
-    # attrsets.foldlAttrs (acc: k: v: acc ++ "echo ${st k} - ${lists.foldl' (acc: v: "${acc}${v.data}\n") "" (st v)}\n") "" clients-to-deploy;
     /*
     PLAN: for every mod derivation, index the `.outPath`.
     this should contain one file. use the `file` command
