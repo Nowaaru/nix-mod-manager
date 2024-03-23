@@ -233,7 +233,7 @@ in {
         // (attrsets.mapAttrs (name: value: {
             enable = true;
             recursive = true;
-            target = value.binaryPath;
+            target = value.rootPath;
             source = nix-mod-manager-final.outPath + "/${name}";
           })
           clients);
