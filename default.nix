@@ -1,12 +1,11 @@
 {
   pkgs,
   lib,
-  home-manager,
   config,
   ...
 }:
 with lib; let
-  inherit (home-manager.lib.hm) dag;
+  inherit (lib.hm) dag;
   inherit (import ./types.nix lib) mod;
   inherit (lib) options;
   cfg = config.programs.nix-mod-manager;
@@ -33,12 +32,12 @@ in {
             };
 
             binaryMods = mkOption {
-              type = home-manager.lib.hm.types.dagOf mod;
+              type = lib.hm.types.dagOf mod;
               default = {};
             };
 
             mods = mkOption {
-              type = home-manager.lib.hm.types.dagOf mod;
+              type = lib.hm.types.dagOf mod;
             };
 
             /*

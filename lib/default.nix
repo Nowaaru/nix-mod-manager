@@ -1,6 +1,7 @@
-{pkgs ? import <nixpkgs> {}}: let
-  inherit (pkgs) lib;
-
+{
+  pkgs,
+  lib,
+}: let
   st = w: builtins.trace w w;
   recursiveApply = with lib.attrsets;
     what: to:

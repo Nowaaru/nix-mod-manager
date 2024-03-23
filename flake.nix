@@ -25,8 +25,11 @@
       overlays = [rust-overlay.overlays.default];
     };
 
-    st = w: builtins.trace w w;
-  in {
+    mkLib = nixpkgs:
+      nixpkgs.lib.extend
+      (self: _: {nnmm = import ./lib {inherit pkgs; lib = self;};} // home-manager.lib);
+
+  in rec {
     devShells.x86_64-linux.default = pkgs.mkShell {
       inputsFrom = [];
 
@@ -35,10 +38,8 @@
       '';
     };
 
-    lib = pkgs.lib.extend (_: prev: {
-      nnmm = import ./lib {inherit pkgs;};
-    });
+    lib = mkLib inputs.nixpkgs;
 
-    homeManagerModules.default = args: import ./. (args // {inherit pkgs home-manager;});
+    homeManagerModules.default = args: import ./. (args // {inherit pkgs lib;});
   };
 }
