@@ -5,6 +5,7 @@
   (noire-utils)
   */
   inherit (pkgs) lib;
+  mkLocalMod = import ./mklocalmod.nix { inherit pkgs; };
 in rec {
   /*
   TODO: make a fetchMod function that uses
@@ -16,19 +17,6 @@ in rec {
   TODO: have fetchGameBanana utilize the fetchMod
   function
   */
-  mkLocalMod = {
-    name ? "mod",
-    store-path,
-  }:
-    with pkgs.stdenv;
-      mkDerivation {
-        inherit name;
-        src = store-path;
-
-        phases = ["installPhase"];
-        installPhase = ''cp $src $out'';
-      };
-
   fetchMod = {
     name ? "${lib.strings.nameFromURL url}",
     url,
