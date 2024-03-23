@@ -89,6 +89,7 @@ nix-mod-manager's default module exports the `programs.nix-mod-manager` module f
 The nix-mod-manager's `lib` output contains the `nnmm` (noire's-nix-mod-manager) library. In this library contains a handful of useful functions for things like creating mod derivations through [referencing store files](https://github.com/Nowaaru/nix-mod-manager/blob/fd1a733b7ba5570b11711c85a5abf6736a2f3b62/lib/fetchers.nix#L19C1-L30) and [fetching from remote CDNs](https://github.com/Nowaaru/nix-mod-manager/blob/fd1a733b7ba5570b11711c85a5abf6736a2f3b62/lib/fetchers.nix#L32-L45).
 
 <h3>⚙️ Customization</h3>
+
 nix-mod-manager exports the `programs.nix-mod-manager` module. For the module to work, the `enable` property must be set to true:
 ```nix
 {
