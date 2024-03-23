@@ -182,4 +182,3 @@ When making an issue, do be sure to <b>remember the human</b> and <b>remember th
 </p>
 <hr />
 <div align="center"><h6> ❄ </h6></div>
-````
