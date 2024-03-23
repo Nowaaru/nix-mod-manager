@@ -31,12 +31,9 @@ in rec {
           sha256 = hash;
         };
 
-        unpackPhase = ''true'';
+        phases = ["installPhase"];
 
-        installPhase = ''
-          cp $src $out;
-          sync;
-        '';
+        installPhase = ''cp $src $out'';
       };
 
   fetchGameBanana = {
