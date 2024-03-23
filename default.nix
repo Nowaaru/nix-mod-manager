@@ -26,12 +26,17 @@ in {
           options = {
             enable = mkEnableOption "the client";
 
-            rootPath = mkOption {
+            binaryPath = mkOption {
               type = uniq str;
             };
 
             modsPath = mkOption {
               type = uniq str; # huh
+            };
+
+            binaryMods = mkOption {
+              type = home-manager.lib.hm.types.dagOf mod;
+              default = {};
             };
 
             mods = mkOption {
@@ -59,7 +64,7 @@ in {
     clients-to-deploy =
       attrsets.foldlAttrs
       (acc: k: v: let
-        sorted = dag.topoSort v.mods;
+        sorted = dag.topoSort (v.mods // (attrsets.mapAttrs (_: v: v // {data = v.data // {passthru.binary = true;};}) v.binaryMods));
         isSorted = sorted ? "result";
       in
         acc
@@ -83,12 +88,6 @@ in {
           compressed file + the decompressed contents
           */
           deploy-mod-deriv = deriv: let
-            mkIfElse = p: yes: no:
-              mkMerge [
-                (mkIf p yes)
-                (mkIf (!p) no)
-              ];
-
             deriv-filetype =
               builtins.readFile
               (
@@ -129,9 +128,10 @@ in {
                     else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                 in ''
                   #/usr/bin/env bash
-                  mkdir $out;
+                  mkdir -p $out;
 
                   ${handler};
+                  sync;
                 '';
               };
 
@@ -145,24 +145,30 @@ in {
             home manager final:
             link the modsPath to the `deriv` output.
             */
-            mass-link-deriv-list-to = where:
+            mass-link-deriv-list-to = binary-where:
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let
-                  deployed-deriv = deploy-mod-deriv w.data;
-                  x = builtins.trace deployed-deriv.drvPath deployed-deriv;
-                  out-path = "${where}/${builtins.toString l}-${w.name}";
+                  is-binary = w.data.passthru ? "binary" && w.data.passthru.binary;
+                  deployed-deriv-path = (deploy-mod-deriv w.data).outPath;
+                  out-path =
+                    if is-binary
+                    then binary-where
+                    else "${binary-where}/${modsPath}/${builtins.toString l}-${w.name}";
                 in ''
-
                   # MOD: ${w.name};
                   mkdir -p ${out-path};
-                  ln -s "${x}"/* ${out-path};
+                  ls -la ${out-path}/**;
+                  cp --no-preserve=mode -frs "${deployed-deriv-path}"/* "${out-path}";
                 '')
                 v);
+            inherit (clients.${k}) modsPath;
           in
             with stdenv;
               mkDerivation {
                 name = "nmm-client-${k}";
-                unpackPhase = "true";
+                unpackPhase = ''
+                  mkdir -p $out/${modsPath};
+                '';
 
                 installPhase = ''
                   ${mass-link-deriv-list-to "$out"}
@@ -214,10 +220,7 @@ in {
         // (attrsets.mapAttrs (name: value: {
             enable = true;
             recursive = true;
-            target =
-              if value ? "modsPath"
-              then "${value.rootPath}/${value.modsPath}"
-              else value.rootPath;
+            target = value.binaryPath;
             source = nix-mod-manager-final.outPath + "/${name}";
           })
           clients);
