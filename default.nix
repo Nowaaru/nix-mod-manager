@@ -1,3 +1,9 @@
+/*
+TODO: add mod group support
+where mod groups are just another DAG of mods
+instead of a DAG. it is then flattened entirely 
+and added to the main DAG in post.
+*/
 {
   pkgs,
   lib,
@@ -133,7 +139,7 @@ in {
                     else if (archiveExtractor == unzip)
                     then ''${unzip}/bin/unzip "${builtins.trace "extracting unzip" deriv.outPath}" -d "$out"''
                     else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar e -op"$out" "${builtins.trace "extracting rar" deriv.outPath}"''
+                    then ''${rar}/bin/rar x -op"$out" "${builtins.trace "extracting rar" deriv.outPath}" -y''
                     else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                 in ''
                   #/usr/bin/env bash
