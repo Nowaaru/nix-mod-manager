@@ -7,7 +7,8 @@
     what: to:
       foldlAttrs (acc: k: v: acc // lib.attrsets.setAttrByPath [(st k)] ((st v) what)) {} to;
 in
-  recursiveApply {inherit pkgs;} {
+  recursiveApply pkgs {
+    providers = import ./providers;
     fetchers = import ./fetchers.nix;
     mkLocalMod = import ./mklocalmod.nix;
   }

@@ -1,21 +1,16 @@
-{pkgs}: let
+pkgs: let
   /*
      TODO: replace type check with
   a dynamic alternative that takes in an example
   (noire-utils)
   */
   inherit (pkgs) lib;
-  mkLocalMod = import ./mklocalmod.nix { inherit pkgs; };
+  mkLocalMod = import ./mklocalmod.nix pkgs;
 in rec {
   /*
   TODO: make a fetchMod function that uses
   the `pkgs.file` package to check the file
   type and decompress accordingly.
-  */
-
-  /*
-  TODO: have fetchGameBanana utilize the fetchMod
-  function
   */
   fetchMod = {
     name ? "${lib.strings.nameFromURL url}",
