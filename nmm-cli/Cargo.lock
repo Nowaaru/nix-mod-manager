@@ -246,8 +246,6 @@ dependencies = [
  "clap",
  "http",
  "querystring",
- "quote",
- "syn",
  "tokio",
 ]
 

@@ -9,6 +9,4 @@ edition = "2021"
 clap = { version = "4.5.3", features = ["derive"] }
 http = "1.1.0"
 querystring = "1.1.0"
-quote = { version = "1.0.35", features = ["proc-macro"] }
-syn = { version = "2.0.53", features = ["full"] }
 tokio = { version = "1.36.0", features = ["full"] }
