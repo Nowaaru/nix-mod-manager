@@ -1,11 +1,11 @@
 <div align="center">
-	<img src = "https://github.com/Nowaaru/nix-mod-manager/assets/16274568/e818c366-f4b4-4dde-9ca7-bff3dc1523b8"/ width=164>
+    <img src = "https://github.com/Nowaaru/nix-mod-manager/assets/16274568/e818c366-f4b4-4dde-9ca7-bff3dc1523b8"/ width=164>
         <h3> 
-		nix-mod-manager
-		<h6> the purest mod manager for home-manager		<br />-•-<br/>
-			 <a href = "#-getting-started">getting started</a> · <a href="#-contributing">contributing</a> · <a href="#%EF%B8%8F-customization">customization</a></h6>
-	</h3>
-	<h6>
+        nix-mod-manager
+        <h6> the purest mod manager for home-manager        <br />-•-<br/>
+             <a href = "#-getting-started">getting started</a> · <a href="#-contributing">contributing</a> · <a href="#%EF%B8%8F-customization">customization</a></h6>
+    </h3>
+    <h6>
         </h6>
         <img alt="GitHub License" src="https://img.shields.io/github/license/Nowaaru/nix-mod-manager?style=flat-square&logo=license&logoColor=%23D9E0EE&labelColor=%23302D41&color=%23F2CDCD"/>
         <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Nowaaru/nix-mod-manager?style=flat-square&labelColor=%23302D41&color=%2389ADF3"/>
@@ -17,7 +17,7 @@
 
 <h3>🔰 Getting Started</h3>
 <ul>
-	  <h5>Requirements to Slay ⚔️</h5>
+      <h5>Requirements to Slay ⚔️</h5>
 
 - [x] Nix, Manager of Packages 🐲
 - [x] Flakes, The Mysterious One ❄️
@@ -30,18 +30,18 @@ to your flake:
 
 ```nix
 [^]
-		nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+        nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    	home-manager = {
+        home-manager = {
             url = "github:nix-community/home-manager/master";
             inputs.nixpkgs.follows = "nixpkgs";
-    	};
+        };
 
         nix-mod-manager.url = "github:nowaaru/nix-mod-manager/master";
     };
 
     outputs = {
-    	home-manager,
+        home-manager,
         nix-mod-manager, # 🌟
 [v]
 ```
@@ -51,18 +51,18 @@ a module file or directly through the module list:
 
 ```nix
 [^]
-            specialArgs = {inherit inputs;};
-       		modules = [];
+        specialArgs = {inherit inputs;};
+            modules = [];
         };
 
-    	homeConfigurations."rainbow-road" = home-manager.lib.homeManagerConfiguration {
-      		inherit pkgs;
-      		extraSpecialArgs = {inherit inputs;};
-      		modules = [
-        		nix-mod-manager.homeManagerModules.default # 🌟
-        		./home.nix
-      		];
-    	};
+        homeConfigurations."rainbow-road" = home-manager.lib.homeManagerConfiguration {
+              inherit pkgs;
+              extraSpecialArgs = {inherit inputs;};
+              modules = [
+                nix-mod-manager.homeManagerModules.default # 🌟
+                ./home.nix
+              ];
+        };
 [v]
 ```
 
@@ -73,16 +73,16 @@ new module for your Home Manager configuration:
 [^]
         };
 
-    	homeConfigurations."rainbow-road" = home-manager.lib.homeManagerConfiguration {
-      		inherit pkgs;
-      		extraSpecialArgs = {inherit inputs;};
-      		modules = [
-        		nix-mod-manager.homeManagerModules.default
+        homeConfigurations."rainbow-road" = home-manager.lib.homeManagerConfiguration {
+              inherit pkgs;
+              extraSpecialArgs = {inherit inputs;};
+              modules = [
+                nix-mod-manager.homeManagerModules.default
                 ./nix-mod-manager.nix # 🌟
-        		./home.nix
-      		];
-    	};
-	};
+                ./home.nix
+              ];
+        };
+    };
 ```
 
 nix-mod-manager's default module exports the `programs.nix-mod-manager` module for you to change to your liking. To see what fields you can customize, check out the <a href="#%EF%B8%8F-customization">customization index</a>.
