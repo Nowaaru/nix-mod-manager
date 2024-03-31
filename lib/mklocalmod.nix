@@ -1,6 +1,7 @@
 pkgs: {
   name ? "mod",
   store-path,
+  unpackPhase ? ''true'',
 }:
 with pkgs;
   stdenv.mkDerivation {
@@ -9,4 +10,5 @@ with pkgs;
 
     phases = ["installPhase"];
     installPhase = ''cp $src $out'';
+    passthru.unpackPhase = unpackPhase;
   }

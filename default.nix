@@ -144,8 +144,13 @@ in {
                 in ''
                   #/usr/bin/env bash
                   mkdir -vp $out;
-
+                  cd $out
                   ${handler};
+                  ${
+                    if deriv ? "passthru" && deriv.passthru ? "unpackPhase"
+                    then deriv.passthru.unpackPhase
+                    else "# No custom 'unpackPhase.'"
+                  }
                   sync;
                 '';
               };
@@ -154,7 +159,7 @@ in {
             mass-link-deriv-list-to = root-where: binary-where:
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let
-                  is-binary = w.data.passthru ? "binary" && w.data.passthru.binary;
+                  is-binary = w ? "passthru" && w.passthru ? "binary" && w.data.passthru.binary;
                   deployed-deriv-path = (deploy-mod-deriv w.data).outPath;
                   deployment-type = clients.${k}.deploymentType;
 
@@ -180,7 +185,7 @@ in {
                   ls -la ${out-path}/**;
                   cp --no-preserve=mode -frs "${deployed-deriv-path}"/* "${out-path}";
                 '')
-                v);
+                (st v));
             inherit (clients.${k}) modsPath binaryPath;
           in
             with stdenv;

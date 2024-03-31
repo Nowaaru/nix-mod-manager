@@ -7,7 +7,6 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
     home-manager = {
       url = "github:nix-community/home-manager/master";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -17,8 +16,9 @@
     rust-overlay,
     ...
   } @ inputs: let
+    system = "x86_64-linux";
     pkgs = import nixpkgs {
-      system = "x86_64-linux";
+      inherit system;
       config = {
         allowUnfree = true;
       };
@@ -27,10 +27,17 @@
 
     mkLib = nixpkgs:
       nixpkgs.lib.extend
-      (self: _: {nnmm = import ./lib {inherit pkgs; lib = self;};} // home-manager.lib);
-
+      (self: _:
+        {
+          nnmm = import ./lib {
+            inherit pkgs;
+            lib = self;
+          };
+        }
+        // home-manager.lib);
   in rec {
-    devShells.x86_64-linux.default = pkgs.mkShell {
+    devShells.${system}.default = pkgs.mkShell {
+      # inherit system;
       inputsFrom = [];
 
       shellHook = ''
@@ -40,6 +47,10 @@
 
     lib = mkLib inputs.nixpkgs;
 
-    homeManagerModules.default = args: import ./. (args // {inherit pkgs lib;});
+    homeManagerModules.default = args:
+      import ./. (args
+        // {
+          inherit system pkgs lib;
+        });
   };
 }
