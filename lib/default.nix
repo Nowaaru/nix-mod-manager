@@ -10,5 +10,6 @@ in
   recursiveApply pkgs {
     providers = import ./providers;
     fetchers = import ./fetchers.nix;
+    lockfile = import ./lockfile.nix;
     mkLocalMod = import ./mklocalmod.nix;
   }

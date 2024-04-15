@@ -139,7 +139,7 @@ in {
                     else if (archiveExtractor == unzip)
                     then ''${unzip}/bin/unzip "${builtins.trace "extracting unzip" deriv.outPath}" -d "$out"''
                     else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar x -op"$out" "${builtins.trace "extracting rar" deriv.outPath}" -y''
+                    then ''${rar}/bin/rar x -op"$out" "${builtins.trace "extracting rar" deriv.outPath}" -or -o+ -y''
                     else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                 in ''
                   #/usr/bin/env bash
