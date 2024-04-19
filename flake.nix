@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    noire-utils.url = "path:/home/noire/Documents/nix-flakes/noire-utils";
     rust-overlay.url = "github:oxalica/rust-overlay";
     home-manager = {
       url = "github:nix-community/home-manager/master";
