@@ -194,7 +194,7 @@ in {
 
                   mkdir -vp ${out-path};
                   ls -la ${out-path}/**;
-                  cp --no-preserve=mode -frs "${deployed-deriv-path}"/* "${out-path}";
+                  cp --no-preserve=mode -vfrs "${deployed-deriv-path}"/* "${out-path}";
                 '')
                 (st v));
             inherit (clients.${k}) modsPath binaryPath;
@@ -225,7 +225,7 @@ in {
           + ''
             # ${v.name}
             mkdir -vp $out/${k};
-            ln -s ${v.outPath}/* $out/${k};''\n''\n
+            ln -sv ${v.outPath}/* $out/${k};''\n''\n
           '') ""
         client-deployers;
       };
