@@ -20,19 +20,27 @@
       config = {
         allowUnfree = true;
       };
+      overlays = [
+        (
+          new: old: {
+            lib =
+              # use old here because
+              # new.lib will equal try to
+              # extend itself again on access
+              old.lib.extend
+              (_: _:
+                {
+                  inherit (new) fetchurl;
+                  nnmm = import ./lib new;
+                }
+                // home-manager.lib);
+          }
+        )
+      ];
     };
-
-    mkLib = nixpkgs:
-      nixpkgs.lib.extend
-      (self: _:
-        {
-          nnmm = import ./lib {
-            inherit pkgs;
-            lib = self;
-          };
-        }
-        // home-manager.lib);
   in rec {
+    inherit (pkgs) lib;
+
     devShells.${system}.default = pkgs.mkShell {
       # inherit system;
       inputsFrom = [];
@@ -41,8 +49,6 @@
         export DEBUG=1
       '';
     };
-
-    lib = mkLib inputs.nixpkgs;
 
     homeManagerModules.default = args:
       import ./. (args
