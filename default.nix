@@ -164,6 +164,27 @@ in {
                   }
                   sync;
                 '';
+
+                fixupPhase =
+                  if deriv.passthru ? "unpackSingularFolders"
+                  then ''
+                    #!/usr/bin/env bash;
+
+                    shopt -s nullglob extglob
+
+                    cd $out;
+                    to=(./*);
+                    if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
+                        echo "Moving all entries inside of ''${to[0]}."
+                        mv -v "''${to[0]}"/* $out;
+                        echo "Removing folder ''${to[0]}.";
+                        rm -rf "''${to[0]}";
+                    else
+                        echo "unable to find singular folder in '${deriv.name}'"
+                        echo "''${to[0]/*}"
+                    fi
+                  ''
+                  else '''';
               };
 
           deriv = stdenv: let
