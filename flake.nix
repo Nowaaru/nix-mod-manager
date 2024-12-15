@@ -12,7 +12,6 @@
   outputs = {
     nixpkgs,
     home-manager,
-    rust-overlay,
     ...
   } @ inputs: let
     system = "x86_64-linux";
@@ -21,7 +20,6 @@
       config = {
         allowUnfree = true;
       };
-      overlays = [rust-overlay.overlays.default];
     };
 
     mkLib = nixpkgs:
