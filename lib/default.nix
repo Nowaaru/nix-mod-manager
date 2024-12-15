@@ -7,4 +7,5 @@ in
   recursiveApply lib {
     providers = import ./providers;
     fetchers = import ./fetchers.nix;
+    mkLocalMod = _: (import ./mklocalmod.nix pkgs.stdenv);
   }
