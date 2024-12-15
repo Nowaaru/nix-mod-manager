@@ -115,14 +115,25 @@ in {
               .outPath;
 
             archiveExtractor = with pkgs;
-              if (deriv-filetype == "application/x-rar")
-              then rar
-              else
-                (
-                  if (deriv-filetype == "application/zip" && cfg.forceGnuUnzip)
-                  then unzip
-                  else p7zip
-                );
+            # if (deriv-filetype == "application/x-rar")
+            # then rar
+            # else
+              (
+                if
+                  (deriv-filetype
+                    == "application/zip"
+                    || cfg.forceGnuUnzip
+                    || !pkgs.config.allowUnfree)
+                then unzip
+                else if pkgs.config.allowUnfree
+                then p7zip-rar
+                else
+                  abort ''
+                    Archive '${deriv.name}' cannot be extracted with GNU Unzip.
+                    Please enable unfree packages through 'nixpkgs.config.allowUnfree = true'
+                    or by setting an environment variable before your command 'NIXPKGS_ALLOW_UNFREE=1 <COMMAND>;'.
+                  ''
+              );
           in
             with pkgs;
               stdenv.mkDerivation {
@@ -134,15 +145,15 @@ in {
 
                 unpackPhase = let
                   handler =
-                    if (archiveExtractor == p7zip)
-                    then ''${p7zip}/bin/7z x "${builtins.trace "extracting p7zip" deriv.outPath}" -y -o"$out"''
+                    if (archiveExtractor == p7zip-rar)
+                    then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"$out"''
                     else if (archiveExtractor == unzip)
-                    then ''${unzip}/bin/unzip "${builtins.trace "extracting unzip" deriv.outPath}" -d "$out"''
+                    then ''${unzip}/bin/unzip "${deriv.outPath}" -d "$out"''
                     else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar x -op"$out" "${builtins.trace "extracting rar" deriv.outPath}" -or -o+ -y''
+                    then ''${rar}/bin/rar x -op"$out" "${deriv.outPath}" -or -o+ -y''
                     else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                 in ''
-                  #/usr/bin/env bash
+                  #!/usr/bin/env bash
                   mkdir -vp $out;
                   cd $out
                   ${handler};
