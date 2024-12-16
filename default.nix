@@ -102,7 +102,7 @@ in {
     clients-to-deploy =
       attrsets.foldlAttrs
       (acc: k: v: let
-        sorted = dag.topoSort (v.mods // (attrsets.mapAttrs (_: v: v // {data = v.data // {passthru.binary = true;};}) v.binaryMods));
+        sorted = dag.topoSort ((attrsets.mapAttrs (_: lib.traceVal) v.mods) // (attrsets.mapAttrs (_: v: v // {data = v.data // {passthru.binary = true;};}) v.binaryMods));
         isSorted = sorted ? "result";
       in
         acc
