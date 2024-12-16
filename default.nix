@@ -137,26 +137,22 @@ in {
               )
               .outPath;
 
-            archiveExtractor = with pkgs;
-            # if (deriv-filetype == "application/x-rar")
-            # then rar
-            # else
-              (
-                if
-                  (deriv-filetype
-                    == "application/zip"
-                    || cfg.forceGnuUnzip
-                    || !pkgs.config.allowUnfree)
-                then unzip
-                else if pkgs.config.allowUnfree
-                then p7zip-rar
-                else
-                  abort ''
-                    Archive '${deriv.name}' cannot be extracted with GNU Unzip.
-                    Please enable unfree packages through 'nixpkgs.config.allowUnfree = true'
-                    or by setting an environment variable before your command 'NIXPKGS_ALLOW_UNFREE=1 <COMMAND>;'.
-                  ''
-              );
+            archiveExtractor = with pkgs; (
+              if
+                ((deriv-filetype
+                  == "application/zip"
+                  && cfg.forceGnuUnzip)
+                  || !pkgs.config.allowUnfree)
+              then unzip
+              else if pkgs.config.allowUnfree
+              then p7zip-rar
+              else
+                abort ''
+                  Archive '${deriv.name}' cannot be extracted with GNU Unzip.
+                  Please enable unfree packages through 'nixpkgs.config.allowUnfree = true'
+                  or by setting an environment variable before your command 'NIXPKGS_ALLOW_UNFREE=1 <COMMAND>;'.
+                ''
+            );
           in
             with pkgs;
               stdenv.mkDerivation {
@@ -167,13 +163,15 @@ in {
                 ];
 
                 unpackPhase = let
-                  handler =
+                  handler = let
+                    out = ''''$(readlink "$out" || realpath "$out")'';
+                  in
                     if (archiveExtractor == p7zip-rar)
-                    then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"$out"''
+                    then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${out}"''
                     else if (archiveExtractor == unzip)
-                    then ''${unzip}/bin/unzip "${deriv.outPath}" -d "$out"''
+                    then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${out}"''
                     else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar x -op"$out" "${deriv.outPath}" -or -o+ -y''
+                    then ''${rar}/bin/rar x -op"${out}" "${deriv.outPath}" -or -o+ -y''
                     else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                 in ''
                   #!/usr/bin/env bash
@@ -218,7 +216,7 @@ in {
                   deployed-deriv-path = (deploy-mod-deriv w.data).outPath;
                   deployment-type = clients.${k}.deploymentType;
 
-                  root-out-path = "${root-where}/${modsPath}";
+                  root-out-path = "${root-where}";
 
                   out-path =
                     if is-binary
@@ -240,14 +238,14 @@ in {
                   ls -la ${out-path}/**;
                   cp --no-preserve=mode -vfrs "${deployed-deriv-path}"/* "${out-path}";
                 '')
-                (st v));
+                v);
             inherit (clients.${k}) modsPath binaryPath;
           in
             with stdenv;
               mkDerivation {
                 name = "nmm-client-${k}";
                 unpackPhase = ''
-                  mkdir -vp $out/${modsPath};
+                  mkdir -vp $out #/${modsPath};
                 '';
 
                 installPhase = ''
