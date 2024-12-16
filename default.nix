@@ -294,12 +294,22 @@ in {
             target = ".local/share/nix-mod-manager";
           };
         }
-        // (attrsets.mapAttrs (name: value: {
-            enable = true;
-            recursive = true;
-            target = value.rootPath;
-            source = nix-mod-manager-final.outPath + "/${name}";
-          })
-          clients);
+        // (attrsets.foldlAttrs (acc: name: value:
+          acc
+          // {
+            "nmm-deploy-${name}-mods" = {
+              enable = true;
+              recursive = false;
+              target = lib.strings.normalizePath "${value.rootPath}/${value.modsPath}";
+              source = "${nix-mod-manager-final.outPath}/${name}";
+            };
+            "nmm-deploy-${name}-binary-mods" = {
+              enable = true;
+              recursive = false;
+              target = lib.strings.normalizePath "${value.rootPath}/${value.binaryPath}";
+              source = "${nix-mod-manager-final.outPath}/${value.binaryPath}/${name}";
+            };
+          }) {}
+        clients);
     };
 }
