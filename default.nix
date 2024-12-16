@@ -17,6 +17,11 @@ with lib; let
   cfg = config.programs.nix-mod-manager;
 
   st = w: builtins.trace w w;
+  modsExample = ''
+    entryAnywhere (lib.nmm.mkLocalMod {
+      ...
+    });
+  '';
 in {
   imports = [];
 
@@ -34,28 +39,46 @@ in {
             deploymentType = mkOption {
               type = enum ["loose" "organized"];
               default = "organized";
+              description = ''
+                The way this client will deploy when Home Manager
+                the home manager generation changes.
+
+                Loose - All files are dropped directly into the configured 'modsPath' path.
+                Organized - All mods are contained in a folder with a naming scheme of "{load-order}-{mod-name}".
+              '';
             };
 
             binaryPath = mkOption {
               type = str;
               default = ".";
+              defaultText = "the root path";
+              description = "The path where binary mods (.dlls, executables) are linked to.";
             };
 
             rootPath = mkOption {
               type = uniq str;
+              description = "The path where the game binary is located.";
+              example = "~/.local/share/Steam/GUILTY GEAR STRIVE";
             };
 
             modsPath = mkOption {
-              type = uniq str; # huh
+              type = uniq str;
+              description = "The path where mods are linked to.";
+              example = "/RED/Content/Paks/~mods";
             };
 
             binaryMods = mkOption {
               type = lib.hm.types.dagOf mod;
               default = {};
+              description = "The mods to link to the binaryPath.";
+              example = modsExample;
             };
 
             mods = mkOption {
               type = lib.hm.types.dagOf mod;
+              default = {};
+              description = "The mods to link to the modsPath.";
+              example = modsExample;
             };
 
             /*
