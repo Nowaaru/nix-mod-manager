@@ -1,5 +1,5 @@
 lib: {
-  # Make a provider factory. 
+  # Make a provider factory.
   # Intended to create providers.
   mkProvider = providerData: genericModArguments: (providerData genericModArguments);
 
@@ -19,7 +19,8 @@ lib: {
       hash-algo ? "sha256",
     }:
       lib.fetchurl {
-        inherit postFetch name;
+        inherit postFetch;
+        name = lib.strings.sanitizeDerivationName name;
         url = "${base-uri}/${endpoint}";
 
         curlOptsList = [
