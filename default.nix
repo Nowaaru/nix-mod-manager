@@ -1,7 +1,7 @@
 /*
 TODO: add mod group support
 where mod groups are just another DAG of mods
-instead of a DAG. it is then flattened entirely 
+instead of a DAG. it is then flattened entirely
 and added to the main DAG in post.
 */
 {
@@ -118,13 +118,6 @@ in {
       attrsets.mapAttrs
       (
         k: v: let
-          /*
-          TODO:
-          instead of making a new derivation from the already-fetched
-          mod derivation (which can end up taking a LOT of space),
-          make the fetchers do the detection so we don't have the
-          compressed file + the decompressed contents
-          */
           deploy-mod-deriv = deriv: let
             deriv-filetype =
               builtins.readFile
