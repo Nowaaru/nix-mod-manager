@@ -16,7 +16,6 @@ with lib; let
   inherit (lib) options;
   cfg = config.programs.nix-mod-manager;
 
-  st = w: builtins.trace w w;
   modsExample = ''
     entryAnywhere (lib.nmm.mkLocalMod {
       ...
