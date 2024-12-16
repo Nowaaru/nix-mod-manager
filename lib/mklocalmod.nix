@@ -1,6 +1,9 @@
-stdenv: {
+stdenv: lib: {
   name ? "mod",
   store-path,
+  hash ? lib.fakeHash,
+  checksum ? hash,
+
   # Whether to automatically
   # unpack mods that have one
   # entry in their top-level
@@ -11,8 +14,10 @@ stdenv.mkDerivation {
   inherit name;
   src = store-path;
 
-  phases = ["installPhase"];
-  installPhase = ''ln -sv $src $out'';
+  phases = ["setupPhase"];
+  setupPhase = ''
+    cp -Hrsvf "''$src" "''$out"
+  '';
 
   passthru = {
     inherit unpackPhase unpackSingularFolders;

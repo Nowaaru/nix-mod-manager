@@ -18,13 +18,19 @@ in {
       checksum ? lib.fakeHash,
       unpackPhase ? ''true'',
       file-id,
-    }:
+    }: let
+      sanitized-name =
+        lib.strings.sanitizeDerivationName name;
+    in
       lib.nnmm.mkLocalMod {
-        inherit name unpackPhase;
+        name = sanitized-name;
+
+        inherit unpackPhase;
         inherit unpackSingularFolders;
+        inherit checksum;
 
         store-path = requestProvider.mkRequest {
-          name = "${name}-zip";
+          name = "${sanitized-name}-zip";
           hash-algo = "sha256";
 
           hash =
