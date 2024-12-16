@@ -6,6 +6,6 @@ pkgs: let
 in
   recursiveApply lib {
     providers = import ./providers;
-    fetchers = import ./fetchers.nix;
-    mkLocalMod = _: (import ./mklocalmod.nix pkgs.stdenv);
+    dag = import ./dag.nix;
+    mkLocalMod = import ./mklocalmod.nix pkgs.stdenv; # this guy's a little bit special
   }
