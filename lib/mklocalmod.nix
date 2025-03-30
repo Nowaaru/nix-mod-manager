@@ -1,12 +1,12 @@
 stdenv: lib: {
   name ? "mod",
   store-path,
-  hash ? lib.fakeHash,
-  checksum ? hash,
-
   # Whether to automatically
   # unpack mods that have one
   # entry in their top-level
+  checksum ? "",
+  hash ? "", 
+
   unpackSingularFolders ? false,
   unpackPhase ? ''true'',
 }:
