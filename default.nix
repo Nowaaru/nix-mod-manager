@@ -74,6 +74,7 @@ in {
             binaryMods = mkOption {
               type = lib.hm.types.dagOf mod;
               default = {};
+
               description = "The mods to link to the binaryPath.";
               example = modsExample;
             };
@@ -139,7 +140,7 @@ in {
                 ((deriv-filetype
                   == "application/zip"
                   && cfg.forceGnuUnzip)
-                  || !pkgs.config.allowUnfree)
+                || !pkgs.config.allowUnfree)
               then unzip
               else if pkgs.config.allowUnfree
               then p7zip-rar
@@ -225,15 +226,16 @@ in {
                         at some point
                         */
                         if deployment-type == "organized"
-                        then "${root-out-path}/${builtins.toString l}-${w.name}"
+                        then "${root-out-path}/${builtins.toString l}${w.name}"
                         else root-out-path
                       );
                 in ''
                   # MOD: ${w.name};
 
+                  # echo -- "cp --no-preserve=mode -vfrs --target-directory="${out-path}" "${deployed-deriv-path}"/*
+                  # ls -la ${out-path}/**;
                   mkdir -vp ${out-path};
-                  ls -la ${out-path}/**;
-                  cp --no-preserve=mode -vfrs "${deployed-deriv-path}"/* "${out-path}";
+                  cp --no-preserve=mode -vfrs --target-directory="${out-path}" "${deployed-deriv-path}"/*
                 '')
                 v);
             inherit (clients.${k}) modsPath binaryPath;
