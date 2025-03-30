@@ -38,6 +38,7 @@ in {
             deploymentType = mkOption {
               type = enum ["loose" "organized"];
               default = "organized";
+
               description = ''
                 The way this client will deploy when Home Manager
                 the home manager generation changes.
@@ -49,19 +50,23 @@ in {
 
             binaryPath = mkOption {
               type = str;
-              default = ".";
+              default = "";
+
               defaultText = "the root path";
               description = "The path where binary mods (.dlls, executables) are linked to.";
             };
 
             rootPath = mkOption {
               type = uniq str;
+
               description = "The path where the game binary is located.";
               example = "~/.local/share/Steam/GUILTY GEAR STRIVE";
             };
 
             modsPath = mkOption {
               type = uniq str;
+              default = "mods";
+
               description = "The path where mods are linked to.";
               example = "/RED/Content/Paks/~mods";
             };
