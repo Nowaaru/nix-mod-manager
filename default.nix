@@ -315,13 +315,13 @@ in {
           // {
             "nmm-deploy-${name}-mods" = {
               enable = true;
-              recursive = false;
+              recursive = true;
               target = lib.strings.normalizePath "${value.rootPath}/${value.modsPath}";
               source = "${nix-mod-manager-final.outPath}/${name}";
             };
             "nmm-deploy-${name}-binary-mods" = {
-              enable = true;
-              recursive = false;
+              enable = value.binaryPath != "" && value.binaryPath != ".";
+              recursive = true;
               target = lib.strings.normalizePath "${value.rootPath}/${value.binaryPath}";
               source = "${nix-mod-manager-final.outPath}/${value.binaryPath}/${name}";
             };
