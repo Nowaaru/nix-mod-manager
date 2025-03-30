@@ -155,55 +155,72 @@ in {
             with pkgs;
               stdenv.mkDerivation {
                 name = "nmm-mod-${deriv.name}";
+                # TODO: set 'src' to the extracted deriv
+                # where the 'extracted deriv' refers to
+                # another mkDerivation where the original
+                # rar derivation is the source and is just
+                # the unpacked dir.
+                src = stdenv.mkDerivation (finalAttrs: {
+                  pname = "${deriv.name}-extracted";
+                  version = "1.0.0";
+                  src = deriv;
 
-                nativeBuildInputs = [
-                  archiveExtractor
-                ];
+                  nativeBuildInputs = [
+                    archiveExtractor
+                  ];
 
-                unpackPhase = let
-                  handler = let
-                    out = ''''$(readlink "$out" || realpath "$out")'';
-                  in
-                    if (archiveExtractor == p7zip-rar)
-                    then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${out}"''
-                    else if (archiveExtractor == unzip)
-                    then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${out}"''
-                    else if (archiveExtractor == rar)
-                    then ''${rar}/bin/rar x -op"${out}" "${deriv.outPath}" -or -o+ -y''
-                    else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
-                in ''
-                  #!/usr/bin/env bash
-                  mkdir -vp $out;
-                  cd $out
-                  ${handler};
-                  ${
+                  unpackPhase = let
+                    handler = let
+                      out = ''''$(readlink "$out" || realpath "$out")'';
+                    in
+                      if (archiveExtractor == p7zip-rar)
+                      then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${out}"''
+                      else if (archiveExtractor == unzip)
+                      then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${out}"''
+                      else if (archiveExtractor == rar)
+                      then ''${rar}/bin/rar x -op"${out}" "${deriv.outPath}" -or -o+ -y''
+                      else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
+                  in ''
+                    #!/usr/bin/env bash
+                    mkdir -vp $out;
+                    cd $out
+
+                    ${handler};
+                  '';
+                });
+
+                unpackPhase =
+                  (
+                    if ((deriv.passthru ? "unpackSingularFolders") && deriv.passthru.unpackSingularFolders)
+                    then ''
+                      #!/usr/bin/env bash;
+                      shopt -s nullglob extglob
+                      mkdir -vp $out;
+
+                      to=($src/*);
+                      if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
+                          echo "Moving all entries inside of ''${to[0]}."
+                          # mv -v "''${to[0]}"/* $out;
+                          cp --no-preserve=mode -vfrs "''${to[0]}"/* "$out"
+                          # echo "Removing folder ''${to[0]}.";
+                          # rm -rf "''${to[0]}";
+                      else
+                          echo "unable to find singular folder in '${deriv.name}'"
+                          echo "''${to[0]/*}"
+                          cp --no-preserve=mode -vfrst "$out" "$src"/*
+                      fi
+                    ''
+                    else ''
+                      mkdir -vp $out
+                      # ln -vst $out $src/*
+                      cp --no-preserve=mode -vfrs "$src"/* "$out";
+                    ''
+                  )
+                  + (
                     if deriv ? "passthru" && deriv.passthru ? "unpackPhase"
                     then deriv.passthru.unpackPhase
                     else "# No custom 'unpackPhase.'"
-                  }
-                  sync;
-                '';
-
-                fixupPhase =
-                  if deriv.passthru ? "unpackSingularFolders"
-                  then ''
-                    #!/usr/bin/env bash;
-
-                    shopt -s nullglob extglob
-
-                    cd $out;
-                    to=(./*);
-                    if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
-                        echo "Moving all entries inside of ''${to[0]}."
-                        mv -v "''${to[0]}"/* $out;
-                        echo "Removing folder ''${to[0]}.";
-                        rm -rf "''${to[0]}";
-                    else
-                        echo "unable to find singular folder in '${deriv.name}'"
-                        echo "''${to[0]/*}"
-                    fi
-                  ''
-                  else '''';
+                  );
               };
 
           deriv = stdenv: let
