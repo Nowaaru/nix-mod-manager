@@ -126,7 +126,10 @@ in {
       (
         k: v: let
           deploy-mod-deriv = _deriv: let
-            deriv = if _deriv ? "tmpPath" then _deriv else _deriv.overrideAttrs (final: { tmpPath = "/tmp/nmm-tmp-${final.name}"; });
+            deriv =
+              if _deriv ? "tmpPath"
+              then _deriv
+              else _deriv.overrideAttrs (final: {tmpPath = "/tmp/nmm-tmp-${final.name}";});
             deriv-filetype =
               builtins.readFile
               (
@@ -138,8 +141,8 @@ in {
               )
               .outPath;
 
-
-            passthruHandler = (
+            passthruHandler =
+              (
                 if ((deriv.passthru ? "unpackSingularFolders") && deriv.passthru.unpackSingularFolders)
                 then ''
                   shopt -s nullglob extglob
@@ -176,9 +179,9 @@ in {
               then unzip
               else if pkgs.config.allowUnfree
               then p7zip-rar
+              else if isSrcDirectory
+              then "this shouldn't happen"
               else
-                if isSrcDirectory
-                then "this shouldn't happen" else
                 abort ''
                   Archive '${deriv.name}' cannot be extracted with GNU Unzip.
                   Please enable unfree packages through 'nixpkgs.config.allowUnfree = true'
@@ -186,46 +189,45 @@ in {
                 ''
             );
 
-            out = ''''$(readlink "$out" || realpath "$out")'';
             tmp = ''''$(readlink "$TMP" || realpath "$TMP")'';
           in
             with pkgs;
-                # TODO: set 'src' to the extracted deriv
-                # where the 'extracted deriv' refers to
-                # another mkDerivation where the original
-                # rar derivation is the source and is just
-                # the unpacked dir.
-                 if isSrcDirectory 
-                      then builtins.trace "derivation ${derivation.name} is already a directory, skipping..." deriv 
-                      else 
-                        stdenv.mkDerivation (_: {
-                          # pname = "${deriv.name}-extracted";
-                          pname = "nmm-mod-${deriv.name}";
-                          version = "1.0.0";
-                          src = deriv;
+            # TODO: set 'src' to the extracted deriv
+            # where the 'extracted deriv' refers to
+            # another mkDerivation where the original
+            # rar derivation is the source and is just
+            # the unpacked dir.
+              if isSrcDirectory
+              then builtins.trace "derivation ${derivation.name} is already a directory, skipping..." deriv
+              else
+                stdenv.mkDerivation (_: {
+                  # pname = "${deriv.name}-extracted";
+                  pname = "nmm-mod-${deriv.name}";
+                  version = "1.0.0";
+                  src = deriv;
 
-                          nativeBuildInputs = [ archiveExtractor ];
-                          unpackPhase = let
-                            handler = 
-                              # TODO: figure out why i have to use {tmp} instead of {deriv.tmpDir or $tmp/TMP}
-                              if (archiveExtractor == p7zip-rar)
-                              then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${tmp}"''
-                              else if (archiveExtractor == unzip)
-                              then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${tmp}"''
-                              else if (archiveExtractor == rar)
-                              then ''${rar}/bin/rar x -op"${tmp}" "${deriv.outPath}" -or -o+ -y''
-                              else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
-                          in lib.traceVal ''
-                            #!/usr/bin/env bash
-                            mkdir -vp $out
-                            mkdir -vp ${tmp}
-                            cd $out
+                  nativeBuildInputs = [archiveExtractor];
+                  unpackPhase = let
+                    handler =
+                      # TODO: figure out why i have to use {tmp} instead of {deriv.tmpDir or $tmp/TMP}
+                      if (archiveExtractor == p7zip-rar)
+                      then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${tmp}"''
+                      else if (archiveExtractor == unzip)
+                      then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${tmp}"''
+                      else if (archiveExtractor == rar)
+                      then ''${rar}/bin/rar x -op"${tmp}" "${deriv.outPath}" -or -o+ -y''
+                      else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
+                  in
+                    lib.traceVal ''
+                      #!/usr/bin/env bash
+                      mkdir -vp $out
+                      mkdir -vp ${tmp}
+                      cd $out
 
-                            ${handler}
-                            ${passthruHandler}
-                          '';
-                        });
-
+                      ${handler}
+                      ${passthruHandler}
+                    '';
+                });
 
           deriv = stdenv: let
             # symlinkJoin but better (probably?)
