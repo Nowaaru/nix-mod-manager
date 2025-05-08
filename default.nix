@@ -109,7 +109,7 @@ in {
     clients-to-deploy =
       attrsets.foldlAttrs
       (acc: k: v: let
-        sorted = dag.topoSort ((attrsets.mapAttrs (_: lib.traceVal) v.mods) // (attrsets.mapAttrs (_: v: v // {data = v.data // {passthru.binary = true;};}) v.binaryMods));
+        sorted = dag.topoSort (v.mods // (attrsets.mapAttrs (_: v: v // {data = v.data // {passthru.binary = true;};}) v.binaryMods));
         isSorted = sorted ? "result";
       in
         acc
@@ -148,13 +148,12 @@ in {
                   shopt -s nullglob extglob
                   mkdir -vp $out;
 
-                  to=($TMP/*);
+                  to=($TMP/!(env-vars));
                   if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
                       echo "Moving all entries inside of ''${to[0]}."
                       cp --no-preserve=mode -vfr "''${to[0]}"/* "$out"
                   else
                       echo "unable to find singular folder in '${deriv.name}'"
-                      echo TMP: $TMP OUT: $out;
                       cp --no-preserve=mode -vfr "$TMP"/* "$out";
                   fi
                 ''
@@ -198,7 +197,7 @@ in {
             # rar derivation is the source and is just
             # the unpacked dir.
               if isSrcDirectory
-              then builtins.trace "derivation ${derivation.name} is already a directory, skipping..." deriv
+              then builtins.traceVerbose "derivation ${derivation.name} is already a directory, skipping..." deriv
               else
                 stdenv.mkDerivation (_: {
                   # pname = "${deriv.name}-extracted";
@@ -217,16 +216,15 @@ in {
                       else if (archiveExtractor == rar)
                       then ''${rar}/bin/rar x -op"${tmp}" "${deriv.outPath}" -or -o+ -y''
                       else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
-                  in
-                    lib.traceVal ''
-                      #!/usr/bin/env bash
-                      mkdir -vp $out
-                      mkdir -vp ${tmp}
-                      cd $out
+                  in ''
+                    #!/usr/bin/env bash
+                    mkdir -vp $out
+                    mkdir -vp ${tmp}
+                    cd $out
 
-                      ${handler}
-                      ${passthruHandler}
-                    '';
+                    ${handler}
+                    ${passthruHandler}
+                  '';
                 });
 
           deriv = stdenv: let

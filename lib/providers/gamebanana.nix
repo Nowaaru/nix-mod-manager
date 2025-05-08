@@ -22,27 +22,38 @@ in {
       sanitized-name =
         lib.strings.sanitizeDerivationName name;
     in
-      lib.nnmm.mkLocalMod {
-        name = sanitized-name;
-
-        inherit unpackPhase;
+      requestProvider.mkRequest {
         inherit unpackSingularFolders;
-        inherit checksum;
+        name = "${sanitized-name}-zip";
+        hash-algo = "sha256";
 
-        store-path = requestProvider.mkRequest {
-          name = "${sanitized-name}-zip";
-          hash-algo = "sha256";
+        hash =
+          if (hash == lib.fakeHash && checksum != lib.fakeHash)
+          then checksum
+          else hash;
 
-          hash =
-            if (hash == lib.fakeHash && checksum != lib.fakeHash)
-            then checksum
-            else hash;
-
-          endpoint = "${builtins.toString file-id}";
-          postFetch = ''
-            
-          '';
-        };
+        endpoint = "${builtins.toString file-id}";
+        postFetch = unpackPhase; # '' '';
       };
+    # lib.nnmm.mkLocalMod {
+    # name = sanitized-name;
+    #
+    # inherit unpackPhase;
+    # inherit unpackSingularFolders;
+    # inherit checksum;
+
+    # store-path = requestProvider.mkRequest {
+    #   name = "${sanitized-name}-zip";
+    #   hash-algo = "sha256";
+    #
+    #   hash =
+    #     if (hash == lib.fakeHash && checksum != lib.fakeHash)
+    #     then checksum
+    #     else hash;
+    #
+    #   endpoint = "${builtins.toString file-id}";
+    #   postFetch = unpackPhase; # '' '';
+    # };
+    # };
   });
 }
