@@ -39,6 +39,9 @@ in {
             else hash;
 
           endpoint = "${builtins.toString file-id}";
+          postFetch = ''
+            
+          '';
         };
       };
   });

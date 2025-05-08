@@ -17,9 +17,17 @@ lib: {
       name ? "request",
       postFetch ? ''cp -v $downloadedFile $out'',
       hash-algo ? "sha256",
+      unpackSingularFolders ? false,
     }:
       lib.fetchurl {
-        inherit postFetch;
+        postFetch = ''
+            ${postFetch}
+            
+            if [ ! -e "$out" ]; then
+                echo "unable to finalize request, $out was never created"
+                return 1
+            fi
+        '';
         name = lib.strings.sanitizeDerivationName name;
         url = "${base-uri}/${endpoint}";
 
@@ -33,6 +41,10 @@ lib: {
 
         outputHash = hash;
         outputHashAlgo = hash-algo;
+
+        passthru = {
+            inherit unpackSingularFolders;
+        };
       };
   };
 }

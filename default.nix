@@ -3,6 +3,8 @@ TODO: add mod group support
 where mod groups are just another DAG of mods
 instead of a DAG. it is then flattened entirely
 and added to the main DAG in post.
+
+format
 */
 {
   pkgs,
@@ -123,18 +125,48 @@ in {
       attrsets.mapAttrs
       (
         k: v: let
-          deploy-mod-deriv = deriv: let
+          deploy-mod-deriv = _deriv: let
+            deriv = if _deriv ? "tmpPath" then _deriv else _deriv.overrideAttrs (final: { tmpPath = "/tmp/nmm-tmp-${final.name}"; });
             deriv-filetype =
               builtins.readFile
               (
                 pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} ''
-                  #/usr/bin/env bash
+                  #!/usr/bin/env bash
 
                   echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
                 ''
               )
               .outPath;
 
+
+            passthruHandler = (
+                if ((deriv.passthru ? "unpackSingularFolders") && deriv.passthru.unpackSingularFolders)
+                then ''
+                  shopt -s nullglob extglob
+                  mkdir -vp $out;
+
+                  to=($TMP/*);
+                  if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
+                      echo "Moving all entries inside of ''${to[0]}."
+                      cp --no-preserve=mode -vfr "''${to[0]}"/* "$out"
+                  else
+                      echo "unable to find singular folder in '${deriv.name}'"
+                      echo TMP: $TMP OUT: $out;
+                      cp --no-preserve=mode -vfr "$TMP"/* "$out";
+                  fi
+                ''
+                else ''
+                  mkdir -vp $out
+                  cp --no-preserve=mode -vfr "$TMP"/* "$out";
+                ''
+              )
+              + (
+                if deriv ? "passthru" && deriv.passthru ? "unpackPhase"
+                then deriv.passthru.unpackPhase
+                else "# No custom 'unpackPhase.'"
+              );
+
+            isSrcDirectory = deriv-filetype == "inode/directory";
             archiveExtractor = with pkgs; (
               if
                 ((deriv-filetype
@@ -145,85 +177,58 @@ in {
               else if pkgs.config.allowUnfree
               then p7zip-rar
               else
+                if isSrcDirectory
+                then "this shouldn't happen" else
                 abort ''
                   Archive '${deriv.name}' cannot be extracted with GNU Unzip.
                   Please enable unfree packages through 'nixpkgs.config.allowUnfree = true'
                   or by setting an environment variable before your command 'NIXPKGS_ALLOW_UNFREE=1 <COMMAND>;'.
                 ''
             );
+
+            out = ''''$(readlink "$out" || realpath "$out")'';
+            tmp = ''''$(readlink "$TMP" || realpath "$TMP")'';
           in
             with pkgs;
-              stdenv.mkDerivation {
-                name = "nmm-mod-${deriv.name}";
                 # TODO: set 'src' to the extracted deriv
                 # where the 'extracted deriv' refers to
                 # another mkDerivation where the original
                 # rar derivation is the source and is just
                 # the unpacked dir.
-                src = stdenv.mkDerivation (finalAttrs: {
-                  pname = "${deriv.name}-extracted";
-                  version = "1.0.0";
-                  src = deriv;
+                 if isSrcDirectory 
+                      then builtins.trace "derivation ${derivation.name} is already a directory, skipping..." deriv 
+                      else 
+                        stdenv.mkDerivation (_: {
+                          # pname = "${deriv.name}-extracted";
+                          pname = "nmm-mod-${deriv.name}";
+                          version = "1.0.0";
+                          src = deriv;
 
-                  nativeBuildInputs = [
-                    archiveExtractor
-                  ];
+                          nativeBuildInputs = [ archiveExtractor ];
+                          unpackPhase = let
+                            handler = 
+                              # TODO: figure out why i have to use {tmp} instead of {deriv.tmpDir or $tmp/TMP}
+                              if (archiveExtractor == p7zip-rar)
+                              then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${tmp}"''
+                              else if (archiveExtractor == unzip)
+                              then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${tmp}"''
+                              else if (archiveExtractor == rar)
+                              then ''${rar}/bin/rar x -op"${tmp}" "${deriv.outPath}" -or -o+ -y''
+                              else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
+                          in lib.traceVal ''
+                            #!/usr/bin/env bash
+                            mkdir -vp $out
+                            mkdir -vp ${tmp}
+                            cd $out
 
-                  unpackPhase = let
-                    handler = let
-                      out = ''''$(readlink "$out" || realpath "$out")'';
-                    in
-                      if (archiveExtractor == p7zip-rar)
-                      then ''${p7zip-rar}/bin/7z x "${deriv.outPath}" -y -o"${out}"''
-                      else if (archiveExtractor == unzip)
-                      then ''${unzip}/bin/unzip "${deriv.outPath}" -d "${out}"''
-                      else if (archiveExtractor == rar)
-                      then ''${rar}/bin/rar x -op"${out}" "${deriv.outPath}" -or -o+ -y''
-                      else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
-                  in ''
-                    #!/usr/bin/env bash
-                    mkdir -vp $out;
-                    cd $out
+                            ${handler}
+                            ${passthruHandler}
+                          '';
+                        });
 
-                    ${handler};
-                  '';
-                });
-
-                unpackPhase =
-                  (
-                    if ((deriv.passthru ? "unpackSingularFolders") && deriv.passthru.unpackSingularFolders)
-                    then ''
-                      #!/usr/bin/env bash;
-                      shopt -s nullglob extglob
-                      mkdir -vp $out;
-
-                      to=($src/*);
-                      if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
-                          echo "Moving all entries inside of ''${to[0]}."
-                          # mv -v "''${to[0]}"/* $out;
-                          cp --no-preserve=mode -vfrs "''${to[0]}"/* "$out"
-                          # echo "Removing folder ''${to[0]}.";
-                          # rm -rf "''${to[0]}";
-                      else
-                          echo "unable to find singular folder in '${deriv.name}'"
-                          echo "''${to[0]/*}"
-                          cp --no-preserve=mode -vfrst "$out" "$src"/*
-                      fi
-                    ''
-                    else ''
-                      mkdir -vp $out
-                      # ln -vst $out $src/*
-                      cp --no-preserve=mode -vfrs "$src"/* "$out";
-                    ''
-                  )
-                  + (
-                    if deriv ? "passthru" && deriv.passthru ? "unpackPhase"
-                    then deriv.passthru.unpackPhase
-                    else "# No custom 'unpackPhase.'"
-                  );
-              };
 
           deriv = stdenv: let
+            # symlinkJoin but better (probably?)
             mass-link-deriv-list-to = root-where: binary-where:
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let

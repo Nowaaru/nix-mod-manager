@@ -5,7 +5,7 @@ pkgs: let
       foldlAttrs (acc: k: v: acc // (lib.attrsets.setAttrByPath [k] (v what))) {} to;
 in
   recursiveApply lib {
-    providers = import ./providers;
+    providers = import ./providers pkgs;
     dag = import ./dag.nix;
     mkLocalMod = import ./mklocalmod.nix pkgs.stdenv; # this guy's a little bit special
   }

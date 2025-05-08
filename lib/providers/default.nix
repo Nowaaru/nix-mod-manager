@@ -1,4 +1,4 @@
-lib:
+pkgs: lib:
 with lib;
   attrsets.foldlAttrs (
     a: k: _:
