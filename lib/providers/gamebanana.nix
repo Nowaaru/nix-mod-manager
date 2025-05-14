@@ -33,7 +33,9 @@ in {
           else hash;
 
         endpoint = "${builtins.toString file-id}";
-        postFetch = unpackPhase; # '' '';
+        passthru = {
+          inherit unpackPhase;
+        };
       };
     # lib.nnmm.mkLocalMod {
     # name = sanitized-name;
