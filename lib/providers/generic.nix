@@ -21,7 +21,8 @@ lib: {
       passthru ? {inherit unpackSingularFolders;},
     }:
       lib.fetchurl {
-        inherit passthru;
+        passthru = passthru // {inherit unpackSingularFolders;};
+
         postFetch = ''
           ${postFetch}
 
