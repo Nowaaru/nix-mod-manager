@@ -164,7 +164,7 @@ in {
               )
               + (
                 if deriv ? "passthru" && deriv.passthru ? "unpackPhase"
-                then deriv.passthru.unpackPhase
+                then builtins.traceVerbose "Executing custom unpackPhase: ${deriv.passthru.unpackPhase}" deriv.passthru.unpackPhase
                 else "# No custom 'unpackPhase.'"
               );
 
