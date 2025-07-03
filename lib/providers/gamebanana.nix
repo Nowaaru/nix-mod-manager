@@ -17,14 +17,13 @@ in {
       hash ? lib.fakeHash,
       checksum ? lib.fakeHash,
       unpackPhase ? ''true'',
+      unpackSingularFolders ? layeredProviderArguments.unpackSingularFolders,
       file-id,
-    }: let
-      sanitized-name =
-        lib.strings.sanitizeDerivationName name;
-    in
+    }:
       requestProvider.mkRequest {
         inherit unpackSingularFolders;
-        name = "${sanitized-name}-zip";
+        inherit name;
+
         hash-algo = "sha256";
 
         hash =
@@ -37,25 +36,5 @@ in {
           inherit unpackPhase;
         };
       };
-    # lib.nnmm.mkLocalMod {
-    # name = sanitized-name;
-    #
-    # inherit unpackPhase;
-    # inherit unpackSingularFolders;
-    # inherit checksum;
-
-    # store-path = requestProvider.mkRequest {
-    #   name = "${sanitized-name}-zip";
-    #   hash-algo = "sha256";
-    #
-    #   hash =
-    #     if (hash == lib.fakeHash && checksum != lib.fakeHash)
-    #     then checksum
-    #     else hash;
-    #
-    #   endpoint = "${builtins.toString file-id}";
-    #   postFetch = unpackPhase; # '' '';
-    # };
-    # };
   });
 }
