@@ -135,8 +135,6 @@ in {
               builtins.readFile
               (
                 pkgs.runCommandLocal "nmm-filetype-${deriv.name}" {} ''
-                  #!/usr/bin/env bash
-
                   echo $(${pkgs.file}/bin/file --mime-type -bN "${deriv.outPath}") | tr -d '\n' > $out;
                 ''
               )
@@ -154,7 +152,9 @@ in {
                   to=($TMP/!(env-vars));
                   if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
                       echo "Moving all entries inside of ''${to[0]}."
-                      cp --no-preserve=mode -vfr "''${to[0]}"/* "$out"
+                      for entry in "''${to[0]}"/*; do
+                          cp --no-preserve=mode -vfr "$entry" "$out";
+                      done
                   else
                       echo "unable to find singular folder in '${deriv.name}'"
                       cp --no-preserve=mode -vfr $TMP/!(env_vars) "$out";
@@ -221,7 +221,6 @@ in {
                       then ''${rar}/bin/rar x -op"${tmp}" "${deriv.outPath}" -or -o+ -y''
                       else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                   in ''
-                    #!/usr/bin/env bash
                     shopt -s dotglob
                     mkdir -vp $out
                     mkdir -vp ${tmp}
@@ -258,13 +257,12 @@ in {
                       );
                 in ''
                   # MOD: ${w.name};
-                  # echo -- "cp --no-preserve=mode -vfrs --target-directory="${out-path}" "${deployed-deriv-path}"/*
-                  # echo "making out path dir";
                   mkdir -vp "${out-path}";
-                  cp --no-preserve=mode -vfrs --target-directory="${out-path}" "${deployed-deriv-path}"/*
-                  # echo "ls out path:"
+                  for deployed_file in "${deployed-deriv-path}"/*; do
+                      cp --no-preserve=mode -vfrs --target-directory="${out-path}" "$deployed_file"
+                  done
+                      
                   ls -la ${out-path};
-                  ## echo "ls deployed deriv path?:"
                   ls -la "${deployed-deriv-path}";
                   ${
                     if is-binary
@@ -304,7 +302,9 @@ in {
             + ''
               # ${v.name}
               mkdir -vp $out/${k};
-              ln -sv ${v.outPath}/* $out/${k};''\n''\n
+              for out_file in ${v.outPath}/*; do
+                  ln -sv $out_file $out/${k};''\n''\n
+              done
             '') ""
           client-deployers);
       };
@@ -324,9 +324,11 @@ in {
     mkIf cfg.enable {
       home.file =
         {
-          nix-mod-manager = {
+          "nix-mod-manager-${builtins.hashString "sha256" nix-mod-manager-final.outPath}" = {
             enable = true;
-            recursive = true;
+            recursive = false;
+            force = true;
+            ignorelinks = true;
             source = nix-mod-manager-final.outPath;
             target = ".local/share/nix-mod-manager";
           };
@@ -334,15 +336,16 @@ in {
         // (attrsets.foldlAttrs (acc: name: value:
           acc
           // {
-            "0nmm-deploy-${name}-mods" = {
+            "0nmm-deploy-${name}-mods-${builtins.hashString "sha256" nix-mod-manager-final.outPath}" = {
               enable = true;
               recursive = true;
               target = lib.strings.normalizePath "${value.rootPath}/${value.modsPath}";
               source = "${nix-mod-manager-final.outPath}/${name}";
             };
-            "0nmm-deploy-${name}-binary-mods" = rec {
+            "0nmm-deploy-${name}-binary-mods-${builtins.hashString "sha256" nix-mod-manager-final.outPath}" = rec {
               enable = value.binaryPath != "" && value.binaryPath != ".";
               recursive = true;
+              ignorelinks = true;
               target = lib.strings.normalizePath "${value.rootPath}/${value.binaryPath}";
               source = lib.strings.normalizePath "${nix-mod-manager-final.outPath}/${name}/.binary";
             };
