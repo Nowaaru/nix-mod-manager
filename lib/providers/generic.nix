@@ -15,12 +15,17 @@ lib: {
       base-uri ? api-base-uri,
       api-key ? "",
       name ? "request",
+      dname ? null,
       postFetch ? ''cp -v $downloadedFile $out'',
       hash-algo ? "sha256",
       unpackSingularFolders ? false,
       passthru ? {inherit unpackSingularFolders;},
-    }:
+    } @ args: let
+      url = "${base-uri}/${endpoint}";
+      hashed-args = lib.nnmm.hashAttrs args;
+    in
       lib.fetchurl {
+        inherit url;
         passthru = passthru // {inherit unpackSingularFolders;};
 
         postFetch = ''
@@ -31,8 +36,10 @@ lib: {
               return 1
           fi
         '';
-        name = lib.strings.sanitizeDerivationName name;
-        url = "${base-uri}/${endpoint}";
+        name =
+          if !(builtins.isNull dname)
+          then dname
+          else lib.strings.sanitizeDerivationName "${name}-${hashed-args}";
 
         curlOptsList = [
           ''-H "accept: application/json"''
