@@ -8,4 +8,6 @@ in
     providers = import ./providers pkgs;
     dag = import ./dag.nix;
     mkLocalMod = import ./mklocalmod.nix pkgs.stdenv; # this guy's a little bit special
+
+    hashAttrs = import ./hash-attrs.nix;
   }
