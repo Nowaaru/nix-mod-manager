@@ -32,7 +32,8 @@ in {
 
     clients = mkOption {
       default = {};
-      type = with types; let
+      type = with types;
+      with lib.hm.types; let
         submodule-type = submodule {
           options = {
             enable = mkEnableOption "the client";
@@ -74,7 +75,7 @@ in {
             };
 
             binaryMods = mkOption {
-              type = lib.hm.types.dagOf mod;
+              type = dagOf mod;
               default = {};
 
               description = "The mods to link to the binaryPath.";
@@ -82,7 +83,7 @@ in {
             };
 
             mods = mkOption {
-              type = lib.hm.types.dagOf mod;
+              type = dagOf mod;
               default = {};
               description = "The mods to link to the modsPath.";
               example = modsExample;
@@ -142,11 +143,13 @@ in {
               .outPath;
 
             passthruHandler =
-              (
+              ''
+                shopt -s nullglob extglob dotglob;
+              ''
+              + (
                 if ((deriv.passthru ? "unpackSingularFolders") && deriv.passthru.unpackSingularFolders)
                 then ''
-                  shopt -s nullglob extglob
-                  mkdir -vp $out;
+                  mkdir -vp "$out";
 
                   to=($TMP/!(env-vars));
                   if [[ "''${#to[@]}" -eq 1 ]] && [[ -d "''${to[0]}" ]]; then
@@ -154,12 +157,13 @@ in {
                       cp --no-preserve=mode -vfr "''${to[0]}"/* "$out"
                   else
                       echo "unable to find singular folder in '${deriv.name}'"
-                      cp --no-preserve=mode -vfr "$TMP"/* "$out";
+                      cp --no-preserve=mode -vfr $TMP/!(env_vars) "$out";
+                      echo "Moved."
                   fi
                 ''
                 else ''
-                  mkdir -vp $out
-                  cp --no-preserve=mode -vfr "$TMP"/* "$out";
+                  mkdir -vp "$out"
+                  cp --no-preserve=mode -vfr $TMP/!(env_vars) "$out";
                 ''
               )
               + (
@@ -218,6 +222,7 @@ in {
                       else ''echo "unable to find correct extractor handler for ${archiveExtractor.name}"'';
                   in ''
                     #!/usr/bin/env bash
+                    shopt -s dotglob
                     mkdir -vp $out
                     mkdir -vp ${tmp}
                     cd $out
@@ -232,7 +237,7 @@ in {
             mass-link-deriv-list-to = root-where: binary-where:
               lists.foldl (acc: v: acc + "${v}\n") ""
               (lists.imap0 (l: w: let
-                  is-binary = w ? "passthru" && w.passthru ? "binary" && w.data.passthru.binary;
+                  is-binary = w.data ? "passthru" && w.data.passthru ? "binary" && w.data.passthru.binary;
                   deployed-deriv-path = (deploy-mod-deriv w.data).outPath;
                   deployment-type = clients.${k}.deploymentType;
 
@@ -240,9 +245,9 @@ in {
 
                   out-path =
                     if is-binary
-                    then binary-where
+                    then builtins.trace "Is binary (${binary-where})" binary-where
                     else
-                      (
+                      builtins.trace "Not binary." (
                         /*
                         TODO: turn this into an attrset
                         at some point
@@ -253,11 +258,19 @@ in {
                       );
                 in ''
                   # MOD: ${w.name};
-
                   # echo -- "cp --no-preserve=mode -vfrs --target-directory="${out-path}" "${deployed-deriv-path}"/*
-                  # ls -la ${out-path}/**;
-                  mkdir -vp ${out-path};
+                  # echo "making out path dir";
+                  mkdir -vp "${out-path}";
                   cp --no-preserve=mode -vfrs --target-directory="${out-path}" "${deployed-deriv-path}"/*
+                  # echo "ls out path:"
+                  ls -la ${out-path};
+                  ## echo "ls deployed deriv path?:"
+                  ls -la "${deployed-deriv-path}";
+                  ${
+                    if is-binary
+                    then ""
+                    else ""
+                  }
                 '')
                 v);
             inherit (clients.${k}) modsPath binaryPath;
@@ -266,11 +279,12 @@ in {
               mkDerivation {
                 name = "nmm-client-${k}";
                 unpackPhase = ''
-                  mkdir -vp $out #/${modsPath};
+                  mkdir -vp "$out" "$out/.binary" #/${modsPath};
                 '';
 
-                installPhase = ''
-                  ${mass-link-deriv-list-to "$out" "$out/${binaryPath}"}
+                installPhase = lib.traceVal ''
+                  shopt -s dotglob extglob
+                  ${mass-link-deriv-list-to "$out" "$out/.binary"}
                 '';
               };
         in
@@ -283,14 +297,16 @@ in {
         name = "nix-mod-manager";
         unpackPhase = "true";
 
-        installPhase = foldlAttrs (acc: k: v:
-          acc
-          + ''
-            # ${v.name}
-            mkdir -vp $out/${k};
-            ln -sv ${v.outPath}/* $out/${k};''\n''\n
-          '') ""
-        client-deployers;
+        installPhase =
+          "shopt -s dotglob\n"
+          + (foldlAttrs (acc: k: v:
+            acc
+            + ''
+              # ${v.name}
+              mkdir -vp $out/${k};
+              ln -sv ${v.outPath}/* $out/${k};''\n''\n
+            '') ""
+          client-deployers);
       };
     /*
     PLAN: for every mod derivation, index the `.outPath`.
@@ -299,7 +315,7 @@ in {
 
     if it is a zip, then use unzip.
     if it's a tar.gz, then use tar xf.
-    if it's a rar, then use rar (but require the user to enable unfree packages!!)
+    if it's a rar, then use rar (but require the user to enable unfree packages!!5
     if it's a 7z, then use p7zip.
 
     if it's none of these, prompt the user to write their own builder.
@@ -318,17 +334,17 @@ in {
         // (attrsets.foldlAttrs (acc: name: value:
           acc
           // {
-            "nmm-deploy-${name}-mods" = {
+            "0nmm-deploy-${name}-mods" = {
               enable = true;
               recursive = true;
               target = lib.strings.normalizePath "${value.rootPath}/${value.modsPath}";
               source = "${nix-mod-manager-final.outPath}/${name}";
             };
-            "nmm-deploy-${name}-binary-mods" = {
+            "0nmm-deploy-${name}-binary-mods" = rec {
               enable = value.binaryPath != "" && value.binaryPath != ".";
               recursive = true;
               target = lib.strings.normalizePath "${value.rootPath}/${value.binaryPath}";
-              source = "${nix-mod-manager-final.outPath}/${value.binaryPath}/${name}";
+              source = lib.strings.normalizePath "${nix-mod-manager-final.outPath}/${name}/.binary";
             };
           }) {}
         clients);
