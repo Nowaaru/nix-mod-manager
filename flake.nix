@@ -3,10 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
-    home-manager = {
-      url = "github:nix-community/home-manager/master";
-    };
+    home-manager.url = "github:nix-community/home-manager/master";
   };
 
   outputs = {
